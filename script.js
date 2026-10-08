@@ -420,6 +420,7 @@ const renderProfileArea = () => {
     if (link) profileSocialLinks.append(link);
   });
 
+  document.getElementById('storefronts').classList.toggle('hidden', !isAuthenticated || currentProfile?.accountType === 'shopper');
   profileLoginButton.classList.toggle('hidden', isAuthenticated);
   profileEditButton.classList.toggle('hidden', !isAuthenticated);
   becomeCreatorButton.classList.toggle('hidden', !isAuthenticated || currentProfile?.accountType !== 'shopper');
@@ -736,7 +737,8 @@ const renderStores = () => {
   storeList.replaceChildren();
   renderPostStoreOptions();
 
-  if (!stores.length) {
+  const ownedStores = stores.filter(store => store.ownerUid === auth.currentUser?.uid);
+  if (!ownedStores.length) {
     storeList.append(createElement(
       'div',
       'empty-state',
@@ -745,7 +747,7 @@ const renderStores = () => {
     return;
   }
 
-  stores.forEach((store, index) => {
+  ownedStores.forEach((store, index) => {
     const card = createElement('button', 'store-item');
     card.type = 'button';
     card.dataset.storeId = store.id;
@@ -856,7 +858,8 @@ const createDiscoverPostCard = (post) => {
     copy.append(shopButton);
   } else {
     const browseLink = createElement('a', 'secondary-btn post-shop-button', 'Browse storefronts');
-    browseLink.href = '#storefronts';
+    browseLink.href = '#feed';
+    browseLink.addEventListener('click', () => document.querySelector('[data-feed-filter="stores"]').click());
     copy.append(browseLink);
   }
 
@@ -2302,9 +2305,10 @@ const setAuthenticated = (profile) => {
   document.getElementById('manageStoresButton').classList.remove('hidden');
   document.getElementById('managePostsButton').classList.remove('hidden');
   const isCreator = currentProfile.accountType !== 'shopper';
-  ['newStoreButton', 'newStoreMiniButton', 'openPostModalButton', 'createPostButton', 'feedCreatePost']
+  ['manageStoresButton', 'newStoreButton', 'newStoreMiniButton', 'openPostModalButton', 'createPostButton', 'feedCreatePost']
     .forEach((id) => document.getElementById(id)?.classList.toggle('hidden', !isCreator));
   renderProfileArea();
+  renderStores();
   renderManagedStores();
   renderManagedPosts();
 };
