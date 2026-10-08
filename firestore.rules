@@ -56,6 +56,11 @@ service cloud.firestore {
             && r.status == 'open' && after.status == 'active' && recipient == after.assignedUid
             && n.storeId == after.storeId && n.storeName == after.storeName
             && n.title == 'Project awarded' && n.body == 'Your store ' + n.storeName + ' was selected for this project.')
+          || (n.requestKind == 'withdrawn' && request.auth.uid == r.buyerUid
+            && r.status == 'active' && after.status == 'withdrawn' && recipient == r.assignedUid
+            && n.storeId == r.storeId && n.storeName == r.storeName
+            && n.title == 'Buyer request taken down'
+            && n.body == 'The buyer took down this project request. Contact the buyer for further details.')
           || (n.requestKind == 'completed' && request.auth.uid == r.assignedUid
             && r.status == 'active' && after.status == 'completed' && recipient == r.buyerUid
             && n.storeId == r.storeId && n.storeName == r.storeName
@@ -75,7 +80,12 @@ service cloud.firestore {
         && request.resource.data.status == 'open'
         && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow update: if signedIn() && (
-        (resource.data.status == 'open' && request.auth.uid == resource.data.buyerUid
+        (request.auth.uid == resource.data.buyerUid
+          && resource.data.status in ['open','active','completed'] && request.resource.data.status == 'withdrawn'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','withdrawnAt','updatedAt'])
+          && request.resource.data.withdrawnAt == request.time && request.resource.data.updatedAt == request.time
+          && (resource.data.status != 'active' || existsAfter(/databases/$(database)/documents/notifications/$(resource.data.assignedUid)/items/$('request_' + requestId + '_withdrawn_' + resource.data.storeId))))
+        || (resource.data.status == 'open' && request.auth.uid == resource.data.buyerUid
           && request.resource.data.status == 'active'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','assignedUid','storeId','storeName','updatedAt'])
           && request.resource.data.updatedAt == request.time
