@@ -8,7 +8,8 @@
       content="A social storefront platform where creators launch products, accept payments, and collaborate in rooms."
     />
     <title>Coriva | Web design & web development</title>
-    <link rel="icon" type="image/png" href="assets/coriva-logo.png" />
+    <link rel="icon" type="image/x-icon" href="./favicon.ico?v=3" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png?v=3" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -161,7 +162,7 @@
               <input id="roomBannerInput" type="file" accept="image/*" />
               <span class="storefront-file-picker-action"><span class="upload-plus" aria-hidden="true">+</span><span>Add Banner</span></span>
             </label>
-            <p class="helper-text">Image banner up to 2 MB.</p>
+            <p class="helper-text">Photo up to 20 MB; resized automatically.</p>
             <label>
               <span>Room title</span>
               <input id="roomTitleInput" type="text" maxlength="70" />
@@ -438,7 +439,7 @@
                 <input id="storeBannerInput" type="file" name="storeBanner" accept="image/*" />
                 <span class="storefront-file-picker-action"><span class="upload-plus" aria-hidden="true">+</span><span>Add Banner</span></span>
               </label>
-              <p class="helper-text">Choose image files up to 2 MB each. Your banner appears across the top of this page.</p>
+              <p class="helper-text">Choose photos up to 20 MB each; resized automatically. Your banner appears across the top of this page.</p>
             </section>
             <section class="template-section">
               <h3>About your studio</h3>
@@ -459,7 +460,7 @@
                 <input id="storeTemplateMedia" type="file" name="storeMedia" accept="image/*,video/mp4,video/webm" multiple />
                 <span class="storefront-file-picker-action"><span class="upload-plus" aria-hidden="true">+</span><span>Post Photo Or Video</span></span>
               </label>
-              <p class="helper-text">Add up to 6 images or short videos. Each file can be up to 2 MB.</p>
+              <p class="helper-text">Add up to 6 images or short videos. Photos up to 20 MB; videos up to 2 MB.</p>
               <div class="template-media-preview" id="storeTemplateMediaPreview"></div>
             </section>
             <section class="template-section invoice-manager-section">
@@ -704,7 +705,7 @@
             <span>Photo or video</span>
             <input type="file" name="media" accept="image/*,video/mp4,video/webm" required />
           </label>
-          <p class="helper-text">Use an image or a short MP4/WebM clip up to 2 MB in this browser prototype.</p>
+          <p class="helper-text">Use a photo up to 20 MB or an MP4/WebM clip up to 2 MB.</p>
           <label>
             <span>Link to a storefront</span>
             <select name="storeId" id="postStorefrontSelect">
@@ -1042,7 +1043,7 @@
           <label>
             <span>Profile photo</span>
             <input id="profilePictureInput" type="file" name="profilePicture" accept="image/*" />
-            <small class="helper-text">Use an image up to 2 MB.</small>
+            <small class="helper-text">Use a photo up to 20 MB; resized automatically.</small>
           </label>
           <h3 class="account-subheading">Social links</h3>
           <div class="social-link-fields" id="profileSocialLinkFields"></div>
@@ -1109,6 +1110,6 @@
     </div>
 
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=2" defer></script>
+    <script src="app.bundle.js?v=5" defer></script>
   </body>
 </html>
