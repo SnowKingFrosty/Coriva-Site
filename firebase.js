@@ -24,6 +24,7 @@ import {
   orderBy,
   limit,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -35,7 +36,7 @@ import {
   getDownloadURL,
   getStorage,
   ref,
-  uploadBytes
+  uploadBytesResumable
 } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js';
 
 const firebaseConfig = {
@@ -55,6 +56,24 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// Cancel stalled transfers so the picker cannot stay disabled indefinitely.
+const uploadBytes = (target, data, metadata) => new Promise((resolve, reject) => {
+  const task = uploadBytesResumable(target, data, metadata);
+  let expired = false;
+  const timer = setTimeout(() => {
+    expired = true;
+    task.cancel();
+    reject(Object.assign(new Error('No upload confirmation after 45 seconds. Check your connection. The site owner should also check Firebase Storage is enabled and billing is active.'), {code:'storage/upload-timeout'}));
+  }, 45000);
+  task.on('state_changed', undefined, error => {
+    clearTimeout(timer);
+    if (!expired) reject(error);
+  }, () => {
+    clearTimeout(timer);
+    if (!expired) resolve(task.snapshot);
+  });
+});
+
 export {
   EmailAuthProvider,
   addDoc,
@@ -72,6 +91,7 @@ export {
   orderBy,
   limit,
   query,
+  runTransaction,
   reauthenticateWithCredential,
   ref,
   serverTimestamp,

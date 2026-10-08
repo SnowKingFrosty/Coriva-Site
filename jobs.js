@@ -16,7 +16,7 @@ function renderNotifications(){
     const card=node('article',`job-card notification-card${data.read?'':' unread'}`);
     card.append(node('strong','',data.title),node('p','',data.body),node('time','helper-text',time(data.createdAt)));
     card.append(button('Open',async()=>{
-      if(data.conversationId){await openConversation(data.conversationId);}else if(data.roomId){api.openRoom(data.roomId, data.messageId);}else if(data.jobId){goJob(data.jobId);}
+      if(data.requestId){api.openBuyerRequest(data.requestId);}else if(data.conversationId){await openConversation(data.conversationId);}else if(data.roomId){api.openRoom(data.roomId, data.messageId);}else if(data.jobId){goJob(data.jobId);}
       try{await updateDoc(item.ref,{read:true});}catch(error){notice(error.message,true);}
     }));list.append(card);
   }

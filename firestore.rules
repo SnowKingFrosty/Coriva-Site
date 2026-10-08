@@ -33,7 +33,76 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
         && request.resource.data.read is bool;
-      allow create, delete: if false;
+      allow create: if validRequestNotification(userId, notificationId);
+      allow delete: if false;
+    }
+    function validRequestNotification(recipient, notificationId) {
+      let n = request.resource.data;
+      let r = get(/databases/$(database)/documents/buyerRequests/$(n.requestId)).data;
+      let after = getAfter(/databases/$(database)/documents/buyerRequests/$(n.requestId)).data;
+      let appPath = /databases/$(database)/documents/buyerRequests/$(n.requestId)/applications/$(n.storeId);
+      return signedIn()
+        && n.keys().hasOnly(['requestId','requestKind','storeId','storeName','title','body','read','createdAt'])
+        && n.requestId is string && n.storeId is string && n.storeName is string
+        && n.read == false && n.createdAt == request.time
+        && notificationId == 'request_' + n.requestId + '_' + n.requestKind + '_' + n.storeId
+        && (
+          (n.requestKind == 'apply' && r.status == 'open' && recipient == r.buyerUid
+            && !exists(appPath) && existsAfter(appPath)
+            && getAfter(appPath).data.creatorUid == request.auth.uid
+            && getAfter(appPath).data.storeName == n.storeName
+            && n.title == 'New project application' && n.body == n.storeName + ' applied to your project.')
+          || (n.requestKind == 'selected' && request.auth.uid == r.buyerUid
+            && r.status == 'open' && after.status == 'active' && recipient == after.assignedUid
+            && n.storeId == after.storeId && n.storeName == after.storeName
+            && n.title == 'Project awarded' && n.body == 'Your store ' + n.storeName + ' was selected for this project.')
+          || (n.requestKind == 'completed' && request.auth.uid == r.assignedUid
+            && r.status == 'active' && after.status == 'completed' && recipient == r.buyerUid
+            && n.storeId == r.storeId && n.storeName == r.storeName
+            && n.title == 'Project complete'
+            && n.body == "Your project is done, Please contact '" + n.storeName + "' for further details.")
+        );
+    }
+    match /buyerRequests/{requestId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['buyerUid','title','description','budget','currency','status','createdAt','updatedAt'])
+        && request.resource.data.buyerUid == request.auth.uid
+        && request.resource.data.title is string && request.resource.data.title.size() >= 3 && request.resource.data.title.size() <= 100
+        && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 3000
+        && request.resource.data.budget is number && request.resource.data.budget >= 1 && request.resource.data.budget <= 10000000
+        && request.resource.data.currency in ['USD','CAD','EUR','GBP','AUD']
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && (
+        (resource.data.status == 'open' && request.auth.uid == resource.data.buyerUid
+          && request.resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','assignedUid','storeId','storeName','updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)/applications/$(request.resource.data.storeId)).data.creatorUid == request.resource.data.assignedUid
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)/applications/$(request.resource.data.storeId)).data.storeName == request.resource.data.storeName
+          && existsAfter(/databases/$(database)/documents/notifications/$(request.resource.data.assignedUid)/items/$('request_' + requestId + '_selected_' + request.resource.data.storeId)))
+        || (resource.data.status == 'active' && request.auth.uid == resource.data.assignedUid
+          && request.resource.data.status == 'completed'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt','updatedAt'])
+          && request.resource.data.updatedAt == request.time && request.resource.data.completedAt == request.time
+          && existsAfter(/databases/$(database)/documents/notifications/$(resource.data.buyerUid)/items/$('request_' + requestId + '_completed_' + resource.data.storeId)))
+      );
+      allow delete: if false;
+      match /applications/{storeId} {
+        allow read: if signedIn() && (get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.buyerUid == request.auth.uid
+          || get(/databases/$(database)/documents/stores/$(storeId)).data.ownerUid == request.auth.uid);
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.status == 'open'
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.buyerUid != request.auth.uid
+          && get(/databases/$(database)/documents/stores/$(storeId)).data.ownerUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['creatorUid','storeId','storeName','createdAt'])
+          && request.resource.data.creatorUid == request.auth.uid && request.resource.data.storeId == storeId
+          && request.resource.data.storeName == get(/databases/$(database)/documents/stores/$(storeId)).data.name
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/notifications/$(get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.buyerUid)/items/$('request_' + requestId + '_apply_' + storeId));
+        allow update, delete: if false;
+      }
     }
     match /jobRequestLimits/{userId} { allow read, write: if false; }
     match /emailDeliveries/{deliveryId} { allow read, write: if false; }

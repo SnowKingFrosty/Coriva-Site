@@ -1,6 +1,7 @@
 import { initRoomSearch, matchesRoomQuery, parseSearchQuery } from './room-search.js';
 import { createRoomTools, renderChatContent, createAvatar, avatarURL } from './room-chat.js';
 import { uploadMediaBlob } from './imagekit-media.js';
+import { initBuyerRequests } from './buyer-requests.js';
 import { initJobs } from './jobs.js';
 import { COUNTRIES } from './countries.js';
 import { getExchangeRate } from './exchange-rates.js';
@@ -73,6 +74,10 @@ const addInvoiceItem = document.getElementById('addInvoiceItem');
 const addPaymentMethod = document.getElementById('addPaymentMethod');
 const cancelInvoice = document.getElementById('cancelInvoice');
 const closeStoreTemplate = document.getElementById('closeStoreTemplate');
+const shareStorefrontModal = document.getElementById('shareStorefrontModal');
+const shareStorefrontLink = document.getElementById('shareStorefrontLink');
+const shareStorefrontStatus = document.getElementById('shareStorefrontStatus');
+let pendingStoreLink = new URL(window.location.href).searchParams.get('store');
 const manageStorefrontButton = document.getElementById('manageStorefrontButton');
 const storeLogoInput = document.getElementById('storeLogoInput');
 const storeBannerInput = document.getElementById('storeBannerInput');
@@ -110,6 +115,7 @@ const postStorefrontSelect = document.getElementById('postStorefrontSelect');
 const postUploadStatus = document.getElementById('postUploadStatus');
 const managePostsModal = document.getElementById('managePostsModal');
 const managedPostList = document.getElementById('managedPostList');
+const buyerRequestsPanel = document.getElementById('buyerRequestsPanel');
 const storesPanel = document.getElementById('storesPanel');
 const storesDirectoryGrid = document.getElementById('storesDirectoryGrid');
 const storesDirectoryStatus = document.getElementById('storesDirectoryStatus');
@@ -871,7 +877,7 @@ const createDiscoverPostCard = (post) => {
 };
 
 const renderDiscoverFeed = () => {
-  const searchLabel = activeFeedFilter === 'stores' ? 'Search stores, categories, or @handle' : activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
+  const searchLabel = activeFeedFilter === 'requests' ? 'Search buyer requests' : activeFeedFilter === 'stores' ? 'Search stores, categories, or @handle' : activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
   discoverSearchInput.placeholder = searchLabel;
   discoverSearchInput.setAttribute('aria-label', searchLabel);
   const postResults = discoverPosts.filter((post) => {
@@ -887,8 +893,17 @@ const renderDiscoverFeed = () => {
     ].filter(Boolean).join(' ').toLowerCase();
     return matchesFilter && searchableText.includes(discoverSearchQuery);
   });
-  discoverFeed.classList.toggle('stores-mode', activeFeedFilter === 'stores');
+  discoverFeed.classList.toggle('stores-mode', ['stores', 'requests'].includes(activeFeedFilter));
   discoverFeed.classList.toggle('rooms-mode', activeFeedFilter === 'rooms');
+  if (activeFeedFilter === 'requests') {
+    buyerRequests.render();
+    buyerRequestsPanel.classList.remove('hidden');
+    discoverFeed.replaceChildren(buyerRequestsPanel);
+    discoverSearchStatus.textContent = document.getElementById('requestsDirectoryStatus').textContent;
+    clearDiscoverSearch.classList.toggle('hidden', !discoverSearchQuery);
+    mediaObserver?.disconnect();
+    return;
+  }
   if (activeFeedFilter === 'stores') {
     discoverSearchStatus.textContent = renderStoreDirectory();
     storesPanel.classList.remove('hidden');
@@ -2761,7 +2776,37 @@ const bindLoginModal = () => {
   document.querySelectorAll('#openPostModalButton, #createPostButton, #feedCreatePost').forEach((button) => {
     button.addEventListener('click', openPostComposer);
   });
-  closeStoreTemplate.addEventListener('click', () => closeModal(storeTemplateModal));
+  closeStoreTemplate.addEventListener('click', () => {
+    closeModal(storeTemplateModal);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('store')) { url.searchParams.delete('store'); history.replaceState(null, '', url); }
+  });
+  document.getElementById('shareStorefrontButton').addEventListener('click', () => {
+    if (!activeStorefrontId) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('store', activeStorefrontId);
+    url.hash = '';
+    shareStorefrontLink.value = url.href;
+    shareStorefrontStatus.textContent = '';
+    openModal(shareStorefrontModal);
+    document.getElementById('copyStorefrontLink').focus();
+  });
+  document.getElementById('closeShareStorefront').addEventListener('click', () => closeModal(shareStorefrontModal));
+  shareStorefrontModal.addEventListener('click', event => { if (event.target === shareStorefrontModal) closeModal(shareStorefrontModal); });
+  shareStorefrontLink.addEventListener('click', () => shareStorefrontLink.select());
+  document.getElementById('copyStorefrontLink').addEventListener('click', async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(shareStorefrontLink.value);
+      shareStorefrontStatus.textContent = 'Link copied!';
+    } catch {
+      shareStorefrontLink.focus(); shareStorefrontLink.select();
+      shareStorefrontLink.setSelectionRange(0, shareStorefrontLink.value.length);
+      let copied = false;
+      try { copied = document.execCommand('copy'); } catch {}
+      shareStorefrontStatus.textContent = copied ? 'Link copied!' : 'Select and copy the link above.';
+    }
+  });
   manageStorefrontButton.addEventListener('click', () => {
     const store = stores.find((item) => item.id === activeStorefrontId);
     const isOwner = Boolean(
@@ -3107,7 +3152,7 @@ managedStoreList.addEventListener('click', (event) => {
   deleteDoc(doc(db, 'stores', store.id)).catch(showCloudError);
   renderStores();
   renderManagedStores();
-  if (activeFeedFilter === 'stores') renderDiscoverFeed();
+  if (['stores', 'requests'].includes(activeFeedFilter)) renderDiscoverFeed();
 });
 
 if (storeForm) {
@@ -3393,6 +3438,7 @@ const roomSearch = initRoomSearch({ jump: id => {
 const roomTools = createRoomTools({ input: roomMessageInput, profile: () => currentProfile, onError: error => { roomMessageStatus.textContent = error.message; roomMessageStatus.classList.add('error'); } });
 initJobs({
   requireAuth, openModal, closeModal,
+  openBuyerRequest: id => buyerRequests.openRequest(id),
   openChat: conversation => {
     const store = stores.find(item => item.id === conversation.storeId);
     if (!store) { window.alert('This storefront is unavailable.'); return; }
@@ -3434,6 +3480,11 @@ initializeAccountCountry();
 bindCurrencyPicker(invoiceForm, updateInvoiceTotalPreview);
 bindCurrencyPicker(quoteForm, updateQuoteTotalPreview);
 
+const buyerRequests = initBuyerRequests({
+  requireAuth, openModal, closeModal, search: () => discoverSearchQuery, stores: () => stores,
+  openStore: id => { const store = stores.find(s => s.id === id); if (store) openStoreTemplate(store); else window.alert('This storefront is unavailable.'); }
+});
+
 bindLoginModal();
 bindStoreModal();
 renderStores();
@@ -3444,7 +3495,18 @@ onSnapshot(collection(db, 'stores'), (snapshot) => {
   stores = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
   renderStores();
   renderManagedStores();
-  if (activeFeedFilter === 'stores') renderDiscoverFeed();
+  if (['stores', 'requests'].includes(activeFeedFilter)) renderDiscoverFeed();
+  if (pendingStoreLink) {
+    const linkedStore = stores.find(store => store.id === pendingStoreLink);
+    pendingStoreLink = null;
+    if (linkedStore) {
+      closeModal(firstVisitWelcome);
+      openStoreTemplate(linkedStore);
+    } else {
+      cloudStatus.textContent = 'This storefront link is no longer available.';
+      cloudStatus.classList.remove('hidden');
+    }
+  }
   if (activeStorefrontId && !storeTemplateModal.classList.contains('hidden')) {
     const activeStore = stores.find((item) => item.id === activeStorefrontId);
     if (activeStore) renderStorefrontPage(activeStore);
@@ -3508,7 +3570,7 @@ onAuthStateChanged(auth, async (user) => {
     roomTools.close();
     setLoggedOut();
     if (activeRoomId) renderRoomMessages();
-    if (!readStoredValue('aethelWelcomeSeen', false)) openModal(firstVisitWelcome);
+    if (!readStoredValue('aethelWelcomeSeen', false) && !new URL(window.location.href).searchParams.has('store')) openModal(firstVisitWelcome);
     return;
   }
   try {

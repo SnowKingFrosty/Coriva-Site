@@ -3025,3 +3025,18 @@ button:focus-visible { outline:2px solid #67d5ff; outline-offset:3px; }
 .store-directory-copy { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; padding: 1rem; overflow-wrap: anywhere; }
 .store-directory-copy strong { font-size: 1.05rem; }
 .store-directory-empty { grid-column: 1 / -1; padding: 2rem 1rem; text-align: center; }
+
+.story-strip { flex-wrap: wrap; }
+#buyerRequestsPanel { width: 100%; min-width: 0; }
+.request-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(260px,100%),1fr)); gap: 1rem; }
+.request-card { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; overflow-wrap: anywhere; }
+.request-card h3, .request-card p { margin: 0; }
+.request-description { white-space: pre-wrap; }
+#requestDetail .jobs-list { margin-top: 1rem; }
+#requestDetail .job-card button { margin: .5rem .5rem 0 0; }
+#tasksPage .topbar { flex-wrap: wrap; }
+
+.storefront-nav-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
+#shareStorefrontLink { display: block; width: 100%; min-width: 0; margin: .6rem 0 1rem; padding: .8rem; border: 1px solid rgba(255,255,255,.2); border-radius: 10px; background: rgba(255,255,255,.06); color: inherit; font: inherit; }
+.share-storefront-label { display: block; }
+@media (max-width: 620px) { .storefront-nav-actions { width: 100%; justify-content: flex-start; } }
