@@ -4,6 +4,8 @@ This ZIP is an update for your existing Coriva project. Extract it into the proj
 
 ## Included changes
 
+- Snapchat links now display a bundled yellow ghost logo on profiles, storefronts, and link previews, including snapchat.com and snap.com links.
+
 - Stores tab beside For you and Rooms lists all storefronts in a responsive grid with banners, logos, names, handles, and categories. Search by name, category, or @handle; select a card to open its storefront. New storefronts appear live.
 
 - Notifications show a red unread-count badge, hidden when there are no unread updates. Counts above 99 display as 99+, with the full count available to screen readers.
@@ -30,7 +32,7 @@ This ZIP is an update for your existing Coriva project. Extract it into the proj
    ```
 
    The backend deploy is required for typing/profile/mention fields, persistent read states, storefront message alerts, and room mention alerts. Existing estimate requests use the included corivaWorkflow function. Updating only index.html will not activate these features.
-3. Refresh the website after publishing. Styles and bundle references now use version 12 to avoid old cached files.
+3. Refresh the website after publishing. Styles and bundle references now use version 13 to avoid old cached files.
 
 If you modify the frontend source later, run `npm install` then `npm run build` and publish the rebuilt app.bundle.js. Preserve your current ImageKit worker and upload configuration.
 

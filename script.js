@@ -170,6 +170,7 @@ let isAuthenticated = false;
 let pendingAccountType = 'creator';
 
 const socialServices = [
+  { domains: ['snapchat.com', 'snap.com'], name: 'Snapchat', iconSrc: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%23fffc00%22%2F%3E%3Cpath%20d%3D%22M16%205c-4%200-6%203-6%207v3c-1%20.4-2-.8-3%200-.8.8.3%201.6%202.4%202.1-.8%203-2.5%204.2-4.1%204.8-.8.4-.4%201.2%202.7%201.7l.5%201.6c.2.5%201.4-.1%202.5%200%202%20.2%202.6%201.8%205%201.8s3-1.6%205-1.8c1.1-.1%202.3.5%202.5%200l.5-1.6c3.1-.5%203.5-1.3%202.7-1.7-1.6-.6-3.3-1.8-4.1-4.8%202.1-.5%203.2-1.3%202.4-2.1-1-.8-2%20.4-3%200v-3c0-4-2-7-6-7Z%22%20fill%3D%22white%22%20stroke%3D%22black%22%20stroke-width%3D%221.2%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E' },
   { domains: ['instagram.com'], name: 'Instagram', icon: 'instagram' },
   { domains: ['linkedin.com'], name: 'LinkedIn', icon: 'linkedin' },
   { domains: ['x.com', 'twitter.com'], name: 'X', icon: 'x' },
@@ -324,9 +325,9 @@ const createSocialAnchor = (value) => {
   link.title = service.name;
   link.setAttribute('aria-label', `${service.name} profile`);
 
-  if (service.icon) {
+  if (service.icon || service.iconSrc) {
     const logo = createElement('img');
-    logo.src = `https://cdn.simpleicons.org/${service.icon}`;
+    logo.src = service.iconSrc || `https://cdn.simpleicons.org/${service.icon}`;
     logo.alt = '';
     logo.addEventListener('error', () => {
       logo.replaceWith(createElement('span', 'social-icon-fallback', service.name.charAt(0).toUpperCase()));
@@ -348,9 +349,9 @@ const updateSocialLinkPreview = (input, preview) => {
     return;
   }
 
-  if (service.icon) {
+  if (service.icon || service.iconSrc) {
     const logo = createElement('img');
-    logo.src = `https://cdn.simpleicons.org/${service.icon}`;
+    logo.src = service.iconSrc || `https://cdn.simpleicons.org/${service.icon}`;
     logo.alt = '';
     preview.append(logo);
   }
