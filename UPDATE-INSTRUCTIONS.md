@@ -4,7 +4,9 @@ This ZIP is an update for your existing Coriva project. Extract it into the proj
 
 ## Included changes
 
-- Discord uses a black logo with white eyes on the main profile, storefront banner, and social link preview, including discord.com, discordapp.com and discord.gg links. Its bundled SVG bypasses the storefront filter.
+- X and Twitter links use a bundled white X logo on a black background on profiles, storefronts and link previews.
+
+- Discord uses a white logo with black eyes on a black background on the main profile, storefront banner, and social link preview, including discord.com, discordapp.com and discord.gg links. Its bundled SVG bypasses the storefront filter.
 - Snapchat uses the recognizable ghost in a black-and-white icon on the main profile and storefront banner. Snapchat is exempt from the banner’s monochrome filter, which previously obscured the ghost. The SVG is bundled and needs no external image request.
 
 - Buyers can take down their own requests from the listing, application details or Tasks. Taken-down requests stop accepting applications, leave the public listing and retain their Tasks history. An assigned creator receives a notification when an active request is taken down.
@@ -52,7 +54,7 @@ Project descriptions and budgets are public. Buyers must select a store before a
    ```
 
    The backend deploy is required for typing/profile/mention fields, persistent read states, storefront message alerts, and room mention alerts. Existing estimate requests use the included corivaWorkflow function. Updating only index.html will not activate these features.
-3. Refresh the website after publishing. Styles and bundle references now use version 17 to avoid old cached files.
+3. Refresh the website after publishing. Styles and bundle references now use version 18 to avoid old cached files.
 
 If you modify the frontend source later, run `npm install` then `npm run build` and publish the rebuilt app.bundle.js. Preserve your current ImageKit worker and upload configuration.
 
