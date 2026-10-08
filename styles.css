@@ -3040,3 +3040,12 @@ button:focus-visible { outline:2px solid #67d5ff; outline-offset:3px; }
 #shareStorefrontLink { display: block; width: 100%; min-width: 0; margin: .6rem 0 1rem; padding: .8rem; border: 1px solid rgba(255,255,255,.2); border-radius: 10px; background: rgba(255,255,255,.06); color: inherit; font: inherit; }
 .share-storefront-label { display: block; }
 @media (max-width: 620px) { .storefront-nav-actions { width: 100%; justify-content: flex-start; } }
+
+/* Keep the Snapchat ghost visible on storefront banners and profile cards. */
+.social-link.social-link-snapchat { background: #090909; border-color: rgba(255,255,255,.24); }
+.social-link.social-link-snapchat:hover { background: #181818; }
+.social-link.social-link-snapchat img { width: 1.55rem; height: 1.55rem; filter: none; object-fit: contain; }
+
+.social-link.social-link-discord { background: #fff; border-color: rgba(255,255,255,.5); }
+.social-link.social-link-discord:hover { background: #e5e5e5; }
+.social-link.social-link-discord img { width: 1.55rem; height: 1.55rem; filter: none; object-fit: contain; }
