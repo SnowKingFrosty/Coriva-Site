@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=9" />
   </head>
   <body>
     <div class="page-shell">
@@ -98,7 +98,7 @@
           </div>
 
           <form class="discover-search" id="discoverSearchForm" role="search">
-            <label class="visually-hidden" for="discoverSearchInput">Search Discover posts</label>
+            <label class="visually-hidden" for="discoverSearchInput">Search posts or chat rooms</label>
             <input id="discoverSearchInput" type="search" placeholder="Search posts, creators, or storefronts" autocomplete="off" />
             <button type="button" class="clear-search hidden" id="clearDiscoverSearch" aria-label="Clear Discover search">×</button>
             <span class="visually-hidden" id="discoverSearchStatus" aria-live="polite"></span>
@@ -120,6 +120,7 @@
                 </div>
                 <button type="button" class="primary-btn small-btn" id="newRoomButton">+ Create room</button>
               </div>
+              <p id="roomDirectorySearchStatus" class="helper-text" role="status" aria-live="polite"></p>
               <div class="room-list" id="roomList">
                 <div class="empty-room-card">No chat rooms yet. Create one to start a conversation.</div>
               </div>
@@ -182,6 +183,16 @@
             </div>
             <span id="roomMemberHint">Sign in to send messages</span>
           </div>
+          <form id="roomMessageSearchForm" class="room-message-search" role="search" aria-label="Search room messages">
+            <label for="roomMessageSearchInput">Search this conversation</label>
+            <p class="helper-text room-search-help">Use @username to search a person’s messages, or @username followed by words to narrow the results.</p>
+            <div class="room-message-search-controls">
+              <input id="roomMessageSearchInput" type="search" maxlength="200" placeholder="Search messages or @username…" autocomplete="off" aria-describedby="roomMessageSearchStatus" />
+              <button id="clearRoomMessageSearch" type="button" class="secondary-btn hidden">Clear</button>
+            </div>
+          </form>
+          <p id="roomMessageSearchStatus" class="helper-text" role="status" aria-live="polite"></p>
+          <div id="roomMessageSearchResults" class="room-search-results hidden" aria-label="Matching messages"></div>
           <div class="store-chat-thread room-chat-thread" id="roomMessageList" role="log" aria-live="polite"></div>
           <p class="account-status room-message-status" id="roomMessageStatus" aria-live="polite"></p>
           <div class="room-chat-composer">
@@ -190,9 +201,11 @@
               <span id="roomSelectedGifStatus">GIF ready to send</span>
               <button type="button" class="room-remove-gif" id="removeRoomGif" aria-label="Remove selected GIF">×</button>
             </div>
+            <p id="roomTypingIndicator" class="room-typing-indicator" role="status" aria-live="polite"></p>
+            <div id="roomMentionSuggestions" class="mention-suggestions hidden" role="listbox" aria-label="Mention a room member"></div>
             <form class="store-chat-form room-chat-form" id="roomMessageForm">
               <label class="visually-hidden" for="roomMessageInput">Message this room</label>
-              <input id="roomMessageInput" name="message" type="text" maxlength="500" placeholder="Write a message or paste a GIF..." />
+              <textarea id="roomMessageInput" name="message" rows="3" maxlength="10000" placeholder="Write a message, @mention someone, or paste code…" aria-describedby="roomTypingIndicator"></textarea>
               <button type="submit" class="primary-btn">Send</button>
             </form>
           </div>
@@ -1083,6 +1096,7 @@
       <p id="jobsStatus" class="account-status" aria-live="polite"></p>
       <div class="jobs-layout">
         <section class="glass-card jobs-section"><h2>Notifications</h2><p class="helper-text">Your latest 100 updates</p><div id="notificationList" class="jobs-list"></div></section>
+        <section class="glass-card jobs-section"><h2>Buyer messages</h2><p class="helper-text">Your storefront conversations with buyers and creators.</p><div id="buyerMessageList" class="jobs-list"></div></section>
         <section class="glass-card jobs-section"><h2>Your requests</h2><p class="helper-text">Jobs you requested and requests for your storefronts.</p><div id="jobsList" class="jobs-list"></div></section>
       </div>
       <section id="jobDetail" class="glass-card jobs-section hidden">
@@ -1109,8 +1123,8 @@
       </section>
     </div>
 
-    <script src="media-config.js?v=2" defer></script>
+    <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=6" defer></script>
+    <script src="app.bundle.js?v=9" defer></script>
   </body>
 </html>

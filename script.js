@@ -1,3 +1,6 @@
+import { initRoomSearch, matchesRoomQuery } from './room-search.js';
+import { createRoomTools, renderChatContent, createAvatar, avatarURL } from './room-chat.js';
+import { uploadMediaBlob } from './imagekit-media.js';
 import { initJobs } from './jobs.js';
 import { COUNTRIES } from './countries.js';
 import { getExchangeRate } from './exchange-rates.js';
@@ -11,25 +14,20 @@ import {
   deleteField,
   db,
   deleteDoc,
-  deleteObject,
   doc,
   getDoc,
   getDocs,
-  getDownloadURL,
   onAuthStateChanged,
   onSnapshot,
   query,
   reauthenticateWithCredential,
-  ref,
   serverTimestamp,
   setDoc,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
-  storage,
   updatePassword,
   updateDoc,
-  uploadBytes,
   where,
   writeBatch
 } from './firebase.js';
@@ -114,6 +112,7 @@ const managePostsModal = document.getElementById('managePostsModal');
 const managedPostList = document.getElementById('managedPostList');
 const projectRoomsPanel = document.getElementById('projectRoomsPanel');
 const roomList = document.getElementById('roomList');
+const roomDirectorySearchStatus = document.getElementById('roomDirectorySearchStatus');
 const roomPage = document.getElementById('roomPage');
 const roomHero = document.getElementById('roomHero');
 const roomBanner = document.getElementById('roomBanner');
@@ -255,6 +254,8 @@ let invoicesUnsubscribe = null;
 let isManagingStorefront = false;
 let rooms = [];
 let activeRoomId = null;
+let activeMentionMessageId = null;
+let scrollToMentionPending = false;
 let activeRoomMessages = [];
 let activeRoomMessageUnsubscribe = null;
 let selectedRoomGif = null;
@@ -561,11 +562,8 @@ const renderPostStoreOptions = () => {
 
 const renderRooms = () => {
   roomList.replaceChildren();
-  const matchingRooms = rooms.filter((room) => (
-    `${room.title || ''} ${room.description || ''} ${room.creatorUsername || ''}`
-      .toLowerCase()
-      .includes(discoverSearchQuery)
-  ));
+  const matchingRooms = rooms.filter(room => matchesRoomQuery(room, discoverSearchQuery));
+  roomDirectorySearchStatus.textContent = `${matchingRooms.length} ${matchingRooms.length === 1 ? 'room' : 'rooms'}${discoverSearchQuery ? ' match your search' : ' available'}`;
   if (!matchingRooms.length) {
     roomList.append(createElement(
       'div',
@@ -584,9 +582,8 @@ const renderRooms = () => {
       image.src = room.banner;
       image.alt = '';
       cover.append(image);
-    } else {
-      cover.append(createElement('span', 'room-card-initial', (room.title || 'R').charAt(0).toUpperCase()));
     }
+    cover.append(createElement('span', 'room-card-initial', (room.title || 'R').charAt(0).toUpperCase()));
     const copy = createElement('span', 'room-card-copy');
     copy.append(createElement('strong', '', room.title || 'Untitled room'));
     copy.append(createElement('span', '', room.description || 'Coriva community chat room'));
@@ -597,6 +594,7 @@ const renderRooms = () => {
 };
 
 const renderRoomMessages = () => {
+  const previousScroll = roomMessageList.scrollTop;
   roomMessageList.replaceChildren();
   if (!activeRoomMessages.length) {
     roomMessageList.append(createElement('p', 'store-chat-empty', 'Be the first to start the conversation.'));
@@ -606,11 +604,16 @@ const renderRoomMessages = () => {
   activeRoomMessages.forEach((message) => {
     const isMine = message.senderUid === auth.currentUser?.uid;
     const row = createElement('div', `room-message-row${isMine ? ' mine' : ''}`);
+    row.dataset.messageId = message.id;
+    row.classList.toggle('mention-target', message.id === activeMentionMessageId);
     const bubble = createElement(
       'article',
       `chat-message${isMine ? ' mine' : ''}`
     );
-    bubble.append(createElement('strong', 'room-message-author', message.senderUsername || 'Coriva member'));
+    const author = createElement('div', 'room-message-identity');
+    author.append(createAvatar(message.senderPhotoURL, message.senderUsername), createElement('strong', 'room-message-author', message.senderUsername || 'Coriva member'));
+    bubble.append(author);
+    bubble.classList.toggle('mentioned', message.mentionUids?.includes(auth.currentUser?.uid) || false);
     const gifUrl = isRoomGifUrl(message.gifUrl) ? message.gifUrl : getRoomGifUrl(message.gifId);
     if (gifUrl) {
       const image = createElement('img', 'room-chat-gif');
@@ -619,7 +622,7 @@ const renderRoomMessages = () => {
       image.loading = 'lazy';
       bubble.append(image);
     }
-    if (message.text) bubble.append(createElement('p', '', message.text));
+    if (message.text) bubble.append(renderChatContent(message.text));
     const timestamp = message.createdAt?.toDate?.()
       ? message.createdAt.toDate()
       : new Date(message.createdAt || Date.now());
@@ -649,11 +652,22 @@ const renderRoomMessages = () => {
     }
     roomMessageList.append(row);
   });
-  roomMessageList.scrollTop = roomMessageList.scrollHeight;
+  if (activeMentionMessageId) {
+    roomMessageList.scrollTop = previousScroll;
+    const target = [...roomMessageList.children].find(row => row.dataset.messageId === activeMentionMessageId);
+    if (target && scrollToMentionPending) {
+      scrollToMentionPending = false;
+      requestAnimationFrame(() => { target.scrollIntoView({ block: 'center', behavior: 'auto' }); target.tabIndex = -1; target.focus({ preventScroll: true }); });
+    }
+  } else roomMessageList.scrollTop = roomMessageList.scrollHeight;
 };
 
-const openRoomPage = (room) => {
+const openRoomPage = (room, messageId = null) => {
+  roomSearch.reset();
   activeRoomId = room.id;
+  activeMentionMessageId = messageId;
+  scrollToMentionPending = Boolean(messageId);
+  roomTools.open(room.id);
   isManagingRoom = false;
   const isOwner = Boolean(auth.currentUser && room.ownerUid === auth.currentUser.uid);
   manageRoomButton.classList.toggle('hidden', !isOwner);
@@ -695,7 +709,13 @@ const openRoomPage = (room) => {
           const second = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
           return first - second;
         });
+      roomTools.setMessages(activeRoomMessages);
+      roomSearch.update(activeRoomMessages);
       renderRoomMessages();
+      if (activeMentionMessageId && !activeRoomMessages.some(message => message.id === activeMentionMessageId)) {
+        roomMessageStatus.textContent = 'The selected message was deleted. You can still view the room conversation.';
+        scrollToMentionPending = false;
+      }
     },
     showCloudError
   );
@@ -722,20 +742,25 @@ const renderStores = () => {
     card.setAttribute('aria-label', `View ${store.name} storefront`);
 
     const art = createElement('span', `store-art art-${(index % 4) + 1}`);
-    const cover = store.media?.[0]?.data || store.projectImages?.[0];
-    if (cover && (!store.media?.[0]?.type || store.media[0].type.startsWith('image/'))) {
+    const cover = store.banner;
+    if (cover) {
       const image = createElement('img');
       image.src = cover;
       image.alt = '';
       art.append(image);
     }
+    const logo = createElement('span', 'store-card-logo', store.name?.charAt(0)?.toUpperCase() || 'C');
+    if (store.logo) {
+      logo.textContent = '';
+      const image = createElement('img'); image.src = store.logo; image.alt = ''; logo.append(image);
+    }
+    art.append(logo);
     const copy = createElement('span', 'store-copy');
     const header = createElement('span', 'store-header');
     header.append(createElement('strong', '', store.name));
     header.append(createElement('span', 'store-category-badge', store.draft ? 'Draft' : store.category || 'Creator page'));
     copy.append(header);
     copy.append(createElement('span', 'store-handle', store.handle));
-    if (store.bio) copy.append(createElement('span', 'store-handle', store.bio));
 
     card.append(art, copy);
     storeList.append(card);
@@ -803,6 +828,9 @@ const createDiscoverPostCard = (post) => {
 };
 
 const renderDiscoverFeed = () => {
+  const searchLabel = activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
+  discoverSearchInput.placeholder = searchLabel;
+  discoverSearchInput.setAttribute('aria-label', searchLabel);
   const postResults = discoverPosts.filter((post) => {
     const matchesFilter = activeFeedFilter === 'all' || activeFeedFilter === 'post';
     const linkedStore = stores.find((store) => store.id === post.storeId);
@@ -821,11 +849,7 @@ const renderDiscoverFeed = () => {
     projectRoomsPanel.classList.remove('hidden');
     discoverFeed.classList.add('rooms-mode');
     discoverFeed.replaceChildren(projectRoomsPanel);
-    const matchingRoomCount = rooms.filter((room) => (
-      `${room.title || ''} ${room.description || ''} ${room.creatorUsername || ''}`
-        .toLowerCase()
-        .includes(discoverSearchQuery)
-    )).length;
+    const matchingRoomCount = rooms.filter(room => matchesRoomQuery(room, discoverSearchQuery)).length;
     discoverSearchStatus.textContent = `${matchingRoomCount} ${matchingRoomCount === 1 ? 'room' : 'rooms'} found`;
     clearDiscoverSearch.classList.toggle('hidden', !discoverSearchQuery);
     if (mediaObserver) mediaObserver.disconnect();
@@ -1784,7 +1808,9 @@ const renderStoreChat = () => {
 
   messages.forEach((message) => {
     const bubble = createElement('div', `chat-message${message.senderUid === auth.currentUser?.uid ? ' mine' : ''}`);
-    bubble.append(createElement('p', '', message.text));
+    const identity = createElement('div', 'room-message-identity');
+    identity.append(createAvatar(message.senderPhotoURL, message.senderUsername), createElement('strong', '', message.senderUid === auth.currentUser?.uid ? 'You' : message.senderUsername || 'Other participant'));
+    bubble.append(identity, renderChatContent(message.text));
     const createdAt = message.createdAt?.toDate ? message.createdAt.toDate() : new Date(message.createdAt);
     bubble.append(createElement('time', '', createdAt.toLocaleString()));
     storeChatThread.append(bubble);
@@ -1792,11 +1818,11 @@ const renderStoreChat = () => {
   storeChatThread.scrollTop = storeChatThread.scrollHeight;
 };
 
-const openStoreChat = (store) => {
+const openStoreChat = (store, existingConversation = null) => {
   if (!requireAuth('signin')) return;
-  activeChatConversationId = `${store.id}_${auth.currentUser.uid}`;
+  activeChatConversationId = existingConversation?.id || `${store.id}_${auth.currentUser.uid}`;
   const conversationRef = doc(db, 'chats', activeChatConversationId);
-  const participants = [...new Set([auth.currentUser.uid, store.ownerUid].filter(Boolean))];
+  const participants = existingConversation?.participants || [...new Set([auth.currentUser.uid, store.ownerUid].filter(Boolean))];
   setDoc(conversationRef, { storeId: store.id, participants }, { merge: true })
     .then(() => {
       if (activeChatUnsubscribe) activeChatUnsubscribe();
@@ -1811,6 +1837,9 @@ const openStoreChat = (store) => {
               return first - second;
             });
           renderStoreChat();
+          if (!storeChatModal.classList.contains('hidden') && !document.hidden && auth.currentUser) {
+            setDoc(doc(db, 'chats', activeChatConversationId, 'readStates', auth.currentUser.uid), { readAt: serverTimestamp() }).catch(showCloudError);
+          }
         },
         showCloudError
       );
@@ -1886,20 +1915,63 @@ const renderManagedPosts = () => {
   });
 };
 
-const readImageFile = (file) => new Promise((resolve, reject) => {
+const imageFileType = file => file.type || ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',heic:'image/heic',heif:'image/heif'}[file.name?.split('.').pop().toLowerCase()] || '');
+const validImageFile = file => imageFileType(file).startsWith('image/') && file.size <= 20 * 1024 * 1024;
+const validMediaFile = file => imageFileType(file).startsWith('image/') ? validImageFile(file) : ['video/mp4','video/webm'].includes(file.type) && file.size <= 2 * 1024 * 1024;
+const uploadErrorMessage = error => {
+  const messages = {
+    'storage/unauthorized': 'Firebase Storage denied this upload. The site owner needs to deploy storage.rules to the configured Firebase project.',
+    'storage/unauthenticated': 'Your session expired. Sign in again and retry.',
+    'storage/bucket-not-found': 'The configured Firebase Storage bucket does not exist. The site owner needs to enable Storage and check the bucket name.',
+    'storage/project-not-found': 'Firebase Storage is not configured for this project.',
+    'storage/quota-exceeded': 'Firebase Storage quota or billing is blocking uploads. The site owner needs to check the Firebase billing plan.',
+    'storage/retry-limit-exceeded': 'The upload timed out. Check your connection and try again.',
+    'storage/canceled': 'The upload was canceled. Please try again.'
+  };
+  return messages[error.code] || error.message || 'Upload failed. Please try again.';
+};
+const prepareImage = async file => {
+  if (!validImageFile(file)) throw new Error('Choose an image no larger than 20 MB.');
+  const type = imageFileType(file);
+  if (file.size <= 2 * 1024 * 1024 && ['image/jpeg','image/png','image/webp','image/gif'].includes(type)) return file.type ? file : new Blob([file], {type});
+  if (type === 'image/gif') throw new Error('Animated GIFs must be 2 MB or smaller. Use a JPG, PNG, or WebP for larger photos.');
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('This browser cannot read that image. Export it as JPG, PNG, or WebP and try again.'));
+      image.src = url;
+    });
+    const scale = Math.min(1, 1920 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Image processing is unavailable. Try a smaller JPG or PNG.');
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.86, 0.72, 0.55]) {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+      if (blob && blob.size <= 2 * 1024 * 1024) return blob;
+    }
+    throw new Error('This photo could not be reduced enough. Try a smaller image.');
+  } finally { URL.revokeObjectURL(url); }
+};
+const rawFileDataUrl = file => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
   reader.onerror = () => reject(new Error('Unable to read image file'));
   reader.readAsDataURL(file);
 });
+const readImageFile = async file => rawFileDataUrl(imageFileType(file).startsWith('image/') ? await prepareImage(file) : file);
 
 const uploadDataUrl = async (path, dataUrl) => {
   if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  const fileRef = ref(storage, path + '/' + crypto.randomUUID());
-  await uploadBytes(fileRef, blob, { contentType: blob.type });
-  return getDownloadURL(fileRef);
+  const [header, content] = dataUrl.split(',');
+  const type = header.match(/^data:([^;]+)/)?.[1] || 'application/octet-stream';
+  const bytes = Uint8Array.from(atob(content), char => char.charCodeAt(0));
+  const blob = new Blob([bytes], {type});
+  return uploadMediaBlob(blob);
 };
 
 // Save each selected branding image immediately; failed writes never become local saved state.
@@ -1907,30 +1979,49 @@ const imageSaves = new Map();
 const persistSelectedImage = ({ input, ownerUid, path, status, saveButton, commit, apply }) => {
   const file = input.files?.[0];
   if (!file || imageSaves.has(input)) return;
+  let feedback = document.getElementById(input.id + '-upload-status');
+  if (!feedback) {
+    feedback = document.createElement('p');
+    feedback.id = input.id + '-upload-status';
+    feedback.className = 'account-status';
+    feedback.setAttribute('role', 'status');
+    feedback.setAttribute('aria-live', 'polite');
+    input.insertAdjacentElement('afterend', feedback);
+    input.setAttribute('aria-describedby', feedback.id);
+  }
+  const report = (message, error = false) => {
+    for (const element of [feedback, status]) {
+      element.textContent = message;
+      element.classList.toggle('error', error);
+    }
+  };
   if (auth.currentUser?.uid !== ownerUid) {
-    status.textContent = 'Sign in as the owner to change this image.'; status.classList.add('error'); return;
+    report('Sign in as the owner to change this image.', true); return;
   }
-  if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
-    status.textContent = 'Choose an image up to 2 MB.'; status.classList.add('error'); input.value = ''; return;
+  if (!validImageFile(file)) {
+    report('Choose an image up to 20 MB. Larger photos are resized automatically.', true); input.value = ''; return;
   }
-  status.textContent = 'Saving image… Please wait before leaving this page.';
-  status.classList.remove('error');
+  report('Selected ' + file.name + '. Preparing photo…');
   input.disabled = true;
   if (saveButton) saveButton.disabled = true;
   const operation = (async () => {
+    let slowSave;
     try {
       const data = await readImageFile(file);
+      report('Uploading ' + file.name + '…');
       const url = await uploadDataUrl(path, data);
+      report('Photo uploaded. Saving it to your page…');
+      slowSave = setTimeout(() => report('Photo uploaded, but saving to your page is still awaiting Firebase confirmation. Check your connection; do not upload again yet.'), 20000);
       await commit(url);
+      clearTimeout(slowSave);
       apply(url);
       input.value = '';
-      status.textContent = 'Image saved.';
-      status.classList.remove('error');
+      report('Image saved: ' + file.name);
     } catch (error) {
       input.value = '';
-      status.textContent = 'Image was not saved: ' + error.message + '. Check Firebase Storage setup and rules, then select the image again.';
-      status.classList.add('error');
+      report('Image was not saved: ' + uploadErrorMessage(error), true);
     } finally {
+      clearTimeout(slowSave);
       input.disabled = false;
       imageSaves.delete(input);
       if (saveButton && !Array.from(imageSaves.keys()).some(other => other.form === input.form)) saveButton.disabled = false;
@@ -1960,7 +2051,7 @@ const renderStoreTemplateMedia = (mediaItems) => {
 
   mediaItems.slice(0, 6).forEach((item) => {
     const isFile = item instanceof File;
-    const type = isFile ? item.type : item.type;
+    const type = isFile ? imageFileType(item) : item.type;
     const src = isFile ? URL.createObjectURL(item) : item.data;
     if (isFile) templatePreviewUrls.push(src);
     const preview = createElement('div', 'template-media-item');
@@ -2019,13 +2110,13 @@ if (postForm) {
     const formData = new FormData(postForm);
     const mediaFile = formData.get('media');
 
-    if (!mediaFile?.size || mediaFile.size > 2 * 1024 * 1024) {
-      postUploadStatus.textContent = 'Choose a media file up to 2 MB.';
+    if (!mediaFile?.size || !validMediaFile(mediaFile)) {
+      postUploadStatus.textContent = 'Choose a photo up to 20 MB or a video up to 2 MB.';
       postUploadStatus.classList.add('error');
       return;
     }
 
-    if (!mediaFile.type.startsWith('image/') && !['video/mp4', 'video/webm'].includes(mediaFile.type)) {
+    if (!imageFileType(mediaFile).startsWith('image/') && !['video/mp4', 'video/webm'].includes(mediaFile.type)) {
       postUploadStatus.textContent = 'Use an image, MP4, or WebM video.';
       postUploadStatus.classList.add('error');
       return;
@@ -2033,14 +2124,13 @@ if (postForm) {
 
     try {
       const postRef = doc(collection(db, 'posts'));
-      const mediaRef = ref(storage, `users/${auth.currentUser.uid}/posts/${postRef.id}/media`);
-      await uploadBytes(mediaRef, mediaFile, { contentType: mediaFile.type });
-      const mediaData = await getDownloadURL(mediaRef);
+      const uploadFile = imageFileType(mediaFile).startsWith('image/') ? await prepareImage(mediaFile) : mediaFile;
+      const mediaData = await uploadMediaBlob(uploadFile);
       discoverPosts.unshift({
         id: postRef.id,
         type: formData.get('postType').toString(),
         caption: formData.get('caption').toString().trim(),
-        mediaType: mediaFile.type,
+        mediaType: uploadFile.type,
         mediaData,
         storeId: formData.get('storeId').toString(),
         creatorUsername: currentProfile?.username || '',
@@ -2383,9 +2473,7 @@ const bindLoginModal = () => {
     roomSelectedGifStatus.textContent = 'Adding GIF...';
     roomSelectedGif.classList.remove('hidden');
     try {
-      const gifRef = ref(storage, `users/${auth.currentUser.uid}/chat-gifs/${crypto.randomUUID()}.gif`);
-      await uploadBytes(gifRef, gifFile, { contentType: 'image/gif' });
-      pendingGif.url = await getDownloadURL(gifRef);
+      pendingGif.url = await uploadMediaBlob(gifFile);
       pendingGif.uploading = false;
       if (selectedRoomGif === pendingGif) {
         roomSelectedGifImage.src = pendingGif.url;
@@ -2417,6 +2505,7 @@ const bindLoginModal = () => {
       activeRoomMessageUnsubscribe();
       activeRoomMessageUnsubscribe = null;
     }
+    roomTools.close();
     activeRoomId = null;
   });
   manageRoomButton.addEventListener('click', () => {
@@ -2457,15 +2546,13 @@ const bindLoginModal = () => {
         messages.docs.slice(offset, offset + 400).forEach((message) => batch.delete(message.ref));
         await batch.commit();
       }
-      if (room.banner) {
-        await deleteObject(ref(storage, `users/${auth.currentUser.uid}/rooms/${room.id}/banner`));
-      }
       await deleteDoc(doc(db, 'rooms', room.id));
       rooms = rooms.filter((item) => item.id !== room.id);
       if (activeRoomMessageUnsubscribe) {
         activeRoomMessageUnsubscribe();
         activeRoomMessageUnsubscribe = null;
       }
+      roomTools.close();
       activeRoomId = null;
       isManagingRoom = false;
       roomPage.classList.add('hidden');
@@ -2593,6 +2680,8 @@ const bindLoginModal = () => {
         senderUid: auth.currentUser.uid,
         senderUsername: currentProfile?.username || 'Coriva member',
         text,
+        senderPhotoURL: avatarURL(currentProfile?.profilePicture),
+        mentionUids: roomTools.mentionedUsers(text),
         ...(selectedRoomGif ? {
           gifUrl: selectedRoomGif.url,
           gifTitle: selectedRoomGif.title || 'Pasted GIF'
@@ -2600,6 +2689,7 @@ const bindLoginModal = () => {
         createdAt: serverTimestamp()
       });
       roomMessageForm.reset();
+      roomTools.sent();
       selectedRoomGif = null;
       roomSelectedGif.classList.add('hidden');
       roomSelectedGifImage.removeAttribute('src');
@@ -2812,8 +2902,8 @@ if (accountForm) {
     }
 
     const photoFile = formData.get('profilePicture');
-    if (photoFile?.size > 2 * 1024 * 1024) {
-      saveStatus.textContent = 'Profile photos must be 2 MB or smaller.';
+    if (photoFile?.size && !validImageFile(photoFile)) {
+      saveStatus.textContent = 'Choose a profile photo up to 20 MB.';
       saveStatus.classList.add('error');
       return;
     }
@@ -2926,6 +3016,8 @@ storeChatForm.addEventListener('submit', (event) => {
 
   addDoc(collection(db, 'chats', activeChatConversationId, 'messages'), {
     senderUid: auth.currentUser.uid,
+    senderUsername: currentProfile?.username || 'Coriva member',
+    senderPhotoURL: avatarURL(currentProfile?.profilePicture),
     text: message,
     createdAt: serverTimestamp()
   }).then(() => {
@@ -3010,12 +3102,12 @@ if (storeForm) {
 storeTemplateMedia.addEventListener('change', () => {
   const files = Array.from(storeTemplateMedia.files || []);
   const hasInvalidFile = files.some((file) => (
-    file.size > 2 * 1024 * 1024
-    || (!file.type.startsWith('image/') && !['video/mp4', 'video/webm'].includes(file.type))
+    !validMediaFile(file)
+    || (!imageFileType(file).startsWith('image/') && !['video/mp4', 'video/webm'].includes(file.type))
   ));
 
   if (files.length > 6 || hasInvalidFile) {
-    storeTemplateStatus.textContent = 'Choose up to 6 images or MP4/WebM videos, each 2 MB or smaller.';
+    storeTemplateStatus.textContent = 'Choose up to 6 photos (20 MB each) or MP4/WebM videos (2 MB each).';
     storeTemplateStatus.classList.add('error');
     storeTemplateMedia.value = '';
     renderStoreTemplateMedia([]);
@@ -3030,8 +3122,8 @@ storeTemplateMedia.addEventListener('change', () => {
 const previewStoreBrandImage = async (input, target, isLogo) => {
   const file = input.files?.[0];
   if (!file) return;
-  if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
-    storeTemplateStatus.textContent = 'Choose an image file up to 2 MB.';
+  if (!validImageFile(file)) {
+    storeTemplateStatus.textContent = 'Choose an image up to 20 MB.';
     storeTemplateStatus.classList.add('error');
     input.value = '';
     return;
@@ -3119,17 +3211,17 @@ storeTemplateForm.addEventListener('submit', async (event) => {
   const bannerFile = storeBannerInput.files?.[0];
   if (
     files.length > 6
-    || files.some((file) => file.size > 2 * 1024 * 1024)
-    || [logoFile, bannerFile].some((file) => file && (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024))
+    || files.some((file) => !validMediaFile(file))
+    || [logoFile, bannerFile].some((file) => file && (!validImageFile(file)))
   ) {
-    storeTemplateStatus.textContent = 'Choose up to 6 media files and image branding files, all up to 2 MB each.';
+    storeTemplateStatus.textContent = 'Choose up to 6 photos (20 MB each) or videos (2 MB each); logos and banners can be up to 20 MB.';
     storeTemplateStatus.classList.add('error');
     return;
   }
 
   try {
     const selectedMedia = files.length
-      ? await Promise.all(files.map(async (file) => ({ type: file.type, data: await readImageFile(file) })))
+      ? await Promise.all(files.map(async (file) => ({ type: imageFileType(file), data: await readImageFile(file) })))
       : store.media?.length
         ? store.media
         : (store.projectImages || []).map((data) => ({ type: 'image/jpeg', data }));
@@ -3239,8 +3331,30 @@ for (const form of [invoiceForm, quoteForm]) {
     if (event.target.closest('.invoice-remove-item, .payment-remove, .refresh-exchange, #addInvoiceItem, #addQuoteItem, #addPaymentMethod')) dirty();
   });
 }
+const roomSearch = initRoomSearch({ jump: id => {
+  activeMentionMessageId = id;
+  scrollToMentionPending = Boolean(id);
+  renderRoomMessages();
+} });
+const roomTools = createRoomTools({ input: roomMessageInput, profile: () => currentProfile, onError: error => { roomMessageStatus.textContent = error.message; roomMessageStatus.classList.add('error'); } });
 initJobs({
   requireAuth, openModal, closeModal,
+  openChat: conversation => {
+    const store = stores.find(item => item.id === conversation.storeId);
+    if (!store) { window.alert('This storefront is unavailable.'); return; }
+    document.getElementById('notificationsPage').classList.add('hidden');
+    document.querySelector('.page-shell').classList.remove('hidden');
+    location.hash = 'feed';
+    openStoreChat(store, conversation);
+  },
+  openRoom: (id, messageId) => {
+    const room = rooms.find(item => item.id === id);
+    if (!room) { window.alert('This room is unavailable.'); return; }
+    location.hash = 'feed';
+    document.getElementById('notificationsPage').classList.add('hidden');
+    document.querySelector('.page-shell').classList.remove('hidden');
+    openRoomPage(room, messageId);
+  },
   store: () => stores.find(store => store.id === activeStorefrontId),
   compose: (kind, job) => {
     const store = stores.find(item => item.id === job.storeId);
@@ -3336,6 +3450,7 @@ onSnapshot(collection(db, 'rooms'), (snapshot) => {
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
+    roomTools.close();
     setLoggedOut();
     if (activeRoomId) renderRoomMessages();
     if (!readStoredValue('aethelWelcomeSeen', false)) openModal(firstVisitWelcome);

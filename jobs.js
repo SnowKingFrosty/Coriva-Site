@@ -1,4 +1,4 @@
-import { auth, db, functions, httpsCallable, collection, query, where, onSnapshot, doc, updateDoc, onAuthStateChanged, limit, orderBy } from './firebase.js';
+import { auth, db, functions, httpsCallable, collection, query, where, onSnapshot, doc, updateDoc, onAuthStateChanged, limit, orderBy, getDoc, setDoc, serverTimestamp } from './firebase.js';
 const call = httpsCallable(functions, 'corivaWorkflow');
 const $ = id => document.getElementById(id);
 const node = (tag, className = '', text = '') => { const el=document.createElement(tag); el.className=className; el.textContent=text; return el; };
@@ -8,6 +8,62 @@ const time = value => value?.toDate?.().toLocaleString() || 'Just now';
 const requestId = () => crypto.randomUUID();
 let sharedDocuments=[], api, currentJob, jobItems=[], stopJobs, stopNotifications, stops=[], session=0;
 let pendingRequestId=requestId(), currentStore;
+let notificationItems=[], stopChats, chatWatchers=new Map();
+const chatTime = data => timestamp(data?.createdAt);
+function renderNotifications(){
+  const list=$('notificationList');list.replaceChildren();let unread=0;
+  for(const item of notificationItems){const data=item.data();if(!data.read)unread++;
+    const card=node('article',`job-card notification-card${data.read?'':' unread'}`);
+    card.append(node('strong','',data.title),node('p','',data.body),node('time','helper-text',time(data.createdAt)));
+    card.append(button('Open',async()=>{
+      if(data.conversationId){await openConversation(data.conversationId);}else if(data.roomId){api.openRoom(data.roomId, data.messageId);}else if(data.jobId){goJob(data.jobId);}
+      try{await updateDoc(item.ref,{read:true});}catch(error){notice(error.message,true);}
+    }));list.append(card);
+  }
+  // Existing requests stay visible even if their original alert is missing.
+  const notifiedJobs=new Set(notificationItems.map(item=>item.data().jobId));
+  for(const job of jobItems.filter(job=>job.sellerUid===uid() && job.status==='pending' && !notifiedJobs.has(job.id))){
+    unread++;const card=node('article','job-card notification-card unread');
+    card.append(node('strong','','Pending estimate request'),node('p','',`${job.customerName} requested an estimate from ${job.storeName}.`),button('View request',()=>goJob(job.id)));list.append(card);
+  }
+  if(!list.childElementCount)list.append(node('p','empty-state','You’re all caught up. New requests, messages, mentions, and payment updates appear here.'));
+  const inbox=$('buyerMessageList');inbox.replaceChildren();
+  for(const entry of [...chatWatchers.values()].sort((a,b)=>chatTime(b.message)-chatTime(a.message))){
+    if(!entry.message)continue;
+    const isUnread=entry.message.senderUid!==uid() && chatTime(entry.message)>timestamp(entry.readAt);
+    const card=node('article',`job-card notification-card${isUnread?' unread':''}`);
+    card.append(node('strong','',entry.storeName || 'Storefront conversation'),node('p','',entry.message.text),node('time','helper-text',time(entry.message.createdAt)),button('Open conversation',()=>openConversation(entry.id)));
+    inbox.append(card);
+  }
+  if(!inbox.childElementCount)inbox.append(node('p','empty-state','Buyer and creator conversations will appear here.'));
+  // Count an inbox thread only if it has no unread durable message notification.
+  const alertedChats=new Set(notificationItems.filter(item=>!item.data().read).map(item=>item.data().conversationId));
+  const extra=[...chatWatchers.values()].filter(entry=>entry.message?.senderUid!==uid() && chatTime(entry.message)>timestamp(entry.readAt) && !alertedChats.has(entry.id)).length;
+  $('notificationCount').textContent=unread+extra?` (${unread+extra})`:'';
+}
+async function openConversation(id){
+  const token=session;
+  try{
+    const snapshot=await getDoc(doc(db,'chats',id));if(token!==session || !snapshot.exists())return;
+    await setDoc(doc(db,'chats',id,'readStates',uid()),{readAt:serverTimestamp()});
+    api.openChat({id:snapshot.id,...snapshot.data()});
+  }catch(error){notice(error.message,true);}
+}
+function watchConversations(user,token){
+  stopChats=onSnapshot(query(collection(db,'chats'),where('participants','array-contains',user.uid)),snapshot=>{
+    if(token!==session)return;
+    const ids=new Set(snapshot.docs.map(item=>item.id));
+    for(const [id,entry] of chatWatchers){if(!ids.has(id)){entry.stops.forEach(stop=>stop());chatWatchers.delete(id);}}
+    for(const item of snapshot.docs){
+      if(chatWatchers.has(item.id))continue;
+      const entry={id:item.id,...item.data(),message:null,readAt:null,stops:[]};chatWatchers.set(item.id,entry);
+      entry.stops.push(onSnapshot(query(collection(db,'chats',item.id,'messages'),orderBy('createdAt','desc'),limit(1)),messages=>{if(token!==session)return;entry.message=messages.docs[0]?.data() || null;renderNotifications();},error=>notice(error.message,true)));
+      entry.stops.push(onSnapshot(doc(db,'chats',item.id,'readStates',user.uid),state=>{if(token!==session)return;entry.readAt=state.data()?.readAt;renderNotifications();},error=>notice(error.message,true)));
+      getDoc(doc(db,'stores',entry.storeId)).then(store=>{if(token!==session)return;entry.storeName=store.data()?.name;renderNotifications();}).catch(error=>notice(error.message,true));
+    }
+    renderNotifications();
+  },error=>notice(error.message,true));
+}
 const notice = (message,error=false) => { $('jobsStatus').textContent=message; $('jobsStatus').classList.toggle('error',error); };
 const errorText = error => /not-found|internal|unavailable/.test(error.code || '')
   ? 'Unable to complete this action. Check your connection and that the Coriva backend functions and Firestore rules have been deployed.' : error.message;
@@ -103,25 +159,19 @@ function renderDocuments(documents){
   }
 }
 function startSubscriptions(user){
-  session++;stopJobs?.();stopNotifications?.();closeJob();jobItems=[];renderJobs();$('notificationList').replaceChildren();$('notificationCount').textContent='';
+  session++;stopJobs?.();stopNotifications?.();stopChats?.();for(const entry of chatWatchers.values())entry.stops.forEach(stop=>stop());chatWatchers.clear();notificationItems=[];closeJob();jobItems=[];renderJobs();renderNotifications();$('notificationList').replaceChildren();$('notificationCount').textContent='';
   $('notificationsButton').classList.toggle('hidden',!user);
   if(!user){$('notificationsPage').classList.add('hidden');document.querySelector('.page-shell').classList.remove('hidden');return;}
   const token=session;
   stopJobs=onSnapshot(query(collection(db,'jobs'),where('participants','array-contains',user.uid)),snapshot=>{
     if(token!==session)return;
-    jobItems=snapshot.docs.map(item=>({id:item.id,...item.data()})).sort((a,b)=>timestamp(b.updatedAt)-timestamp(a.updatedAt));renderJobs();
+    jobItems=snapshot.docs.map(item=>({id:item.id,...item.data()})).sort((a,b)=>timestamp(b.updatedAt)-timestamp(a.updatedAt));renderJobs();renderNotifications();
   },error=>notice(error.message,true));
   stopNotifications=onSnapshot(query(collection(db,'notifications',user.uid,'items'),orderBy('createdAt','desc'),limit(100)),snapshot=>{
     if(token!==session)return;
-    const list=$('notificationList');list.replaceChildren();let unread=0;
-    for(const item of snapshot.docs){const data=item.data();if(!data.read)unread++;
-      const card=node('article',`job-card notification-card${data.read?'':' unread'}`);
-      card.append(node('strong','',data.title),node('p','',data.body),node('time','helper-text',time(data.createdAt)));
-      card.append(button('Open',async()=>{goJob(data.jobId);try{await updateDoc(item.ref,{read:true});}catch(error){notice(error.message,true);}}));list.append(card);
-    }
-    if(!snapshot.size)list.append(node('p','empty-state','You’re all caught up. New job, message, quote, and payment updates appear here.'));
-    $('notificationCount').textContent=unread?` (${unread})`:'';
+    notificationItems=snapshot.docs;renderNotifications();
   },error=>notice(error.message,true));
+  watchConversations(user,token);
   route();
 }
 export function initJobs(callbacks){

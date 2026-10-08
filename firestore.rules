@@ -203,17 +203,32 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 300;
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
 
+      match /members/{userId} {
+        allow read: if true;
+        allow create, update: if signedIn() && request.auth.uid == userId
+          && exists(/databases/$(database)/documents/rooms/$(roomId))
+          && request.resource.data.keys().hasOnly(['uid','username','photoURL','typing','updatedAt'])
+          && request.resource.data.uid == userId
+          && request.resource.data.username is string && request.resource.data.username.size() <= 100
+          && request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048
+          && request.resource.data.typing is bool && request.resource.data.updatedAt == request.time;
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
+
       match /messages/{messageId} {
         allow read: if true;
         allow create: if signedIn()
           && request.resource.data.keys().hasOnly([
-            'senderUid', 'senderUsername', 'text', 'gifId', 'gifUrl', 'gifTitle', 'createdAt'
+            'senderUid', 'senderUsername', 'senderPhotoURL', 'mentionUids', 'text', 'gifId', 'gifUrl', 'gifTitle', 'createdAt'
           ])
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.senderUsername is string
           && request.resource.data.senderUsername.size() <= 100
           && request.resource.data.text is string
-          && request.resource.data.text.size() <= 500
+          && request.resource.data.text.size() <= 10000
+          && request.resource.data.createdAt == request.time
+          && (!request.resource.data.keys().hasAny(['senderPhotoURL']) || (request.resource.data.senderPhotoURL is string && request.resource.data.senderPhotoURL.size() <= 2048))
+          && (!request.resource.data.keys().hasAny(['mentionUids']) || (request.resource.data.mentionUids is list && request.resource.data.mentionUids.size() <= 10))
           && (
             request.resource.data.text.size() > 0
             || (
@@ -295,9 +310,20 @@ service cloud.firestore {
         && request.resource.data.storeId == resource.data.storeId;
       allow delete: if false;
 
+      match /readStates/{userId} {
+        allow read: if isConversationParticipant(conversationId) && request.auth.uid == userId;
+        allow create, update: if isConversationParticipant(conversationId) && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['readAt']) && request.resource.data.readAt == request.time;
+        allow delete: if false;
+      }
+
       match /messages/{messageId} {
         allow read: if isConversationParticipant(conversationId);
         allow create: if isConversationParticipant(conversationId)
+          && request.resource.data.keys().hasOnly(['senderUid','senderUsername','senderPhotoURL','text','createdAt'])
+          && request.resource.data.createdAt == request.time
+          && (!request.resource.data.keys().hasAny(['senderUsername']) || (request.resource.data.senderUsername is string && request.resource.data.senderUsername.size() <= 100))
+          && (!request.resource.data.keys().hasAny(['senderPhotoURL']) || (request.resource.data.senderPhotoURL is string && request.resource.data.senderPhotoURL.size() <= 2048))
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
