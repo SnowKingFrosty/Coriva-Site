@@ -1,6 +1,4 @@
 node_modules/
-dist/
-.vite/
-.DS_Store
-firebase-debug.log
-firestore-debug.log
+.dev.vars
+.env*
+.wrangler/

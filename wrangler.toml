@@ -1,0 +1,10 @@
+name = "coriva-imagekit-uploads"
+main = "worker.js"
+compatibility_date = "2026-10-07"
+[vars]
+FIREBASE_PROJECT_ID = "aethel-30d56"
+ALLOWED_ORIGINS = "https://coriva.space,https://www.coriva.space,https://snowkingfrosty.github.io"
+[[ratelimits]]
+name = "UPLOAD_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }

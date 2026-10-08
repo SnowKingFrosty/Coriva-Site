@@ -1,1 +1,1 @@
-{"name":"coriva-website","private":true,"scripts":{"build":"node build.cjs"},"devDependencies":{"esbuild":"0.28.2","firebase":"11.10.0"}}
+{"name":"coriva-imagekit-uploads","private":true,"type":"module","scripts":{"deploy":"wrangler deploy"},"dependencies":{"jose":"^6.0.0"},"devDependencies":{"wrangler":"^4.0.0"}}
