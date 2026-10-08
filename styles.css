@@ -3008,3 +3008,20 @@ button:focus-visible { outline:2px solid #67d5ff; outline-offset:3px; }
 .room-chat-panel { height: auto; min-height: 0; grid-template-rows: none; grid-auto-rows: auto; }
 .room-chat-thread { height: clamp(240px, 45dvh, 560px); }
 .room-search-help { margin: 0; }
+#notificationsButton { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; }
+.notification-badge { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 1.4rem; height: 1.4rem; padding: 0 .3rem; box-sizing: border-box; border-radius: 999px; background: #dc2626; color: #fff; font: 700 .75rem/1 Inter, sans-serif; font-variant-numeric: tabular-nums; }
+
+/* Store discovery grid */
+#discoverFeed.stores-mode { height: auto; min-height: 0; align-items: stretch; overflow: visible; scroll-snap-type: none; }
+.stores-feed-panel { width: 100%; min-width: 0; }
+.store-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 1rem; }
+.store-directory-card { display: flex; flex-direction: column; min-width: 0; padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 18px; background: rgba(255,255,255,.04); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: transform .18s, border-color .18s; }
+.store-directory-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.4); }
+.store-directory-card:focus-visible { outline: 3px solid #a78bfa; outline-offset: 3px; }
+.store-directory-art { display: block; position: relative; height: 155px; width: 100%; background: linear-gradient(135deg, #543a83, #284967); }
+.store-directory-banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.store-directory-logo { display: flex; align-items: center; justify-content: center; position: absolute; bottom: 12px; left: 14px; width: 62px; height: 62px; border-radius: 16px; overflow: hidden; background: #191c2c; border: 3px solid rgba(255,255,255,.9); color: white; font-size: 1.6rem; font-weight: 700; box-shadow: 0 4px 18px rgba(0,0,0,.3); }
+.store-directory-logo img { width: 100%; height: 100%; object-fit: cover; }
+.store-directory-copy { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; padding: 1rem; overflow-wrap: anywhere; }
+.store-directory-copy strong { font-size: 1.05rem; }
+.store-directory-empty { grid-column: 1 / -1; padding: 2rem 1rem; text-align: center; }

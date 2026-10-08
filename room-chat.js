@@ -73,10 +73,11 @@ export function createRoomTools({input,profile,onError}) {
   });
   input.setAttribute('aria-controls','roomMentionSuggestions');input.setAttribute('aria-autocomplete','list');
   input.addEventListener('keydown',event=>{
-    if(options.length && ['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(event.key)){
+    if(event.isComposing || event.keyCode===229)return;
+    if(options.length && ['ArrowDown','ArrowUp','Enter','Tab','Escape'].includes(event.key) && !(event.key==='Enter' && event.shiftKey)){
       event.preventDefault();if(event.key==='Escape')hide();else if(event.key==='Enter'||event.key==='Tab')pick(selected);else{selected=(selected+(event.key==='ArrowDown'?1:-1)+options.length)%options.length;highlight();}return;
     }
-    if(event.key==='Enter' && (event.ctrlKey||event.metaKey)){event.preventDefault();input.form.requestSubmit();}
+    if(event.key==='Enter' && !event.shiftKey){event.preventDefault();if(!event.repeat)input.form.requestSubmit();}
   });
   input.addEventListener('blur',()=>{stopTyping();setTimeout(hide,150);});
   function close(){const old=roomId;clearTimeout(idleTimer);clearInterval(interval);unsubscribe?.();unsubscribe=null;roomId=null;members=[];messages=[];hide();indicator.textContent='';if(old)publish(false,old);}

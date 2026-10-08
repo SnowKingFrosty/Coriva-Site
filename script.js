@@ -1,4 +1,4 @@
-import { initRoomSearch, matchesRoomQuery } from './room-search.js';
+import { initRoomSearch, matchesRoomQuery, parseSearchQuery } from './room-search.js';
 import { createRoomTools, renderChatContent, createAvatar, avatarURL } from './room-chat.js';
 import { uploadMediaBlob } from './imagekit-media.js';
 import { initJobs } from './jobs.js';
@@ -110,6 +110,9 @@ const postStorefrontSelect = document.getElementById('postStorefrontSelect');
 const postUploadStatus = document.getElementById('postUploadStatus');
 const managePostsModal = document.getElementById('managePostsModal');
 const managedPostList = document.getElementById('managedPostList');
+const storesPanel = document.getElementById('storesPanel');
+const storesDirectoryGrid = document.getElementById('storesDirectoryGrid');
+const storesDirectoryStatus = document.getElementById('storesDirectoryStatus');
 const projectRoomsPanel = document.getElementById('projectRoomsPanel');
 const roomList = document.getElementById('roomList');
 const roomDirectorySearchStatus = document.getElementById('roomDirectorySearchStatus');
@@ -767,6 +770,45 @@ const renderStores = () => {
   });
 };
 
+const renderStoreDirectory = () => {
+  const { user, term } = parseSearchQuery(discoverSearchQuery);
+  const matches = stores.filter(store =>
+    (!user || String(store.handle || '').replace(/^@/, '').toLowerCase() === user) &&
+    (!term || [store.name, store.handle, store.category].filter(Boolean).join(' ').toLowerCase().includes(term))
+  );
+  storesDirectoryGrid.replaceChildren();
+  matches.forEach((store, index) => {
+    const card = createElement('button', 'store-directory-card');
+    card.type = 'button';
+    card.dataset.openStoreId = store.id;
+    card.setAttribute('aria-label', `View ${store.name || 'creator'} storefront`);
+    const art = createElement('span', `store-directory-art art-${(index % 4) + 1}`);
+    if (store.banner) {
+      const image = createElement('img', 'store-directory-banner');
+      image.src = store.banner; image.alt = ''; image.loading = 'lazy';
+      art.append(image);
+    }
+    const logo = createElement('span', 'store-directory-logo', store.name?.charAt(0)?.toUpperCase() || 'C');
+    if (store.logo) {
+      logo.textContent = '';
+      const image = createElement('img');
+      image.src = store.logo; image.alt = ''; image.loading = 'lazy'; logo.append(image);
+    }
+    art.append(logo);
+    const copy = createElement('span', 'store-directory-copy');
+    copy.append(createElement('strong', '', store.name || 'Creator storefront'));
+    copy.append(createElement('span', 'store-handle', store.handle || ''));
+    copy.append(createElement('span', 'store-category-badge', store.draft ? 'Draft' : store.category || 'Creator page'));
+    card.append(art, copy);
+    storesDirectoryGrid.append(card);
+  });
+  const count = `${matches.length} ${matches.length === 1 ? 'store' : 'stores'} found`;
+  storesDirectoryStatus.textContent = count;
+  if (!matches.length) storesDirectoryGrid.append(createElement('div', 'store-directory-empty',
+    discoverSearchQuery ? 'No stores match your search. Try another name, category, or @handle.' : 'No storefronts yet. Check back soon for new creators.'));
+  return count;
+};
+
 let mediaObserver;
 
 const createDiscoverPostCard = (post) => {
@@ -828,7 +870,7 @@ const createDiscoverPostCard = (post) => {
 };
 
 const renderDiscoverFeed = () => {
-  const searchLabel = activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
+  const searchLabel = activeFeedFilter === 'stores' ? 'Search stores, categories, or @handle' : activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
   discoverSearchInput.placeholder = searchLabel;
   discoverSearchInput.setAttribute('aria-label', searchLabel);
   const postResults = discoverPosts.filter((post) => {
@@ -844,6 +886,16 @@ const renderDiscoverFeed = () => {
     ].filter(Boolean).join(' ').toLowerCase();
     return matchesFilter && searchableText.includes(discoverSearchQuery);
   });
+  discoverFeed.classList.toggle('stores-mode', activeFeedFilter === 'stores');
+  discoverFeed.classList.toggle('rooms-mode', activeFeedFilter === 'rooms');
+  if (activeFeedFilter === 'stores') {
+    discoverSearchStatus.textContent = renderStoreDirectory();
+    storesPanel.classList.remove('hidden');
+    discoverFeed.replaceChildren(storesPanel);
+    clearDiscoverSearch.classList.toggle('hidden', !discoverSearchQuery);
+    if (mediaObserver) mediaObserver.disconnect();
+    return;
+  }
   if (activeFeedFilter === 'rooms') {
     renderRooms();
     projectRoomsPanel.classList.remove('hidden');
@@ -3054,6 +3106,7 @@ managedStoreList.addEventListener('click', (event) => {
   deleteDoc(doc(db, 'stores', store.id)).catch(showCloudError);
   renderStores();
   renderManagedStores();
+  if (activeFeedFilter === 'stores') renderDiscoverFeed();
 });
 
 if (storeForm) {
@@ -3390,6 +3443,7 @@ onSnapshot(collection(db, 'stores'), (snapshot) => {
   stores = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
   renderStores();
   renderManagedStores();
+  if (activeFeedFilter === 'stores') renderDiscoverFeed();
   if (activeStorefrontId && !storeTemplateModal.classList.contains('hidden')) {
     const activeStore = stores.find((item) => item.id === activeStorefrontId);
     if (activeStore) renderStorefrontPage(activeStore);

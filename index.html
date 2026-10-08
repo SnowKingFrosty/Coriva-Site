@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=9" />
+    <link rel="stylesheet" href="styles.css?v=12" />
   </head>
   <body>
     <div class="page-shell">
@@ -31,7 +31,7 @@
 
         <nav class="topnav" aria-label="Main navigation">
           <a href="#feed">Discover</a>
-          <button type="button" id="notificationsButton" class="ghost-btn hidden">Notifications<span id="notificationCount"></span></button>
+          <button type="button" id="notificationsButton" class="ghost-btn hidden">Notifications<span id="notificationCount" class="notification-badge hidden" aria-hidden="true"></span></button>
         </nav>
 
         <div class="top-actions">
@@ -95,10 +95,11 @@
           <div class="story-strip glass-card" role="group" aria-label="Discover feed filter">
             <button type="button" class="story active" data-feed-filter="all">For you</button>
             <button type="button" class="story" data-feed-filter="rooms">Rooms</button>
+            <button type="button" class="story" data-feed-filter="stores">Stores</button>
           </div>
 
           <form class="discover-search" id="discoverSearchForm" role="search">
-            <label class="visually-hidden" for="discoverSearchInput">Search posts or chat rooms</label>
+            <label class="visually-hidden" for="discoverSearchInput">Search posts, chat rooms, or stores</label>
             <input id="discoverSearchInput" type="search" placeholder="Search posts, creators, or storefronts" autocomplete="off" />
             <button type="button" class="clear-search hidden" id="clearDiscoverSearch" aria-label="Clear Discover search">×</button>
             <span class="visually-hidden" id="discoverSearchStatus" aria-live="polite"></span>
@@ -124,6 +125,14 @@
               <div class="room-list" id="roomList">
                 <div class="empty-room-card">No chat rooms yet. Create one to start a conversation.</div>
               </div>
+            </section>
+            <section class="glass-card panel stores-feed-panel hidden" id="storesPanel" aria-labelledby="storesDirectoryTitle">
+              <div class="panel-header"><div>
+                <div class="panel-title" id="storesDirectoryTitle">Stores</div>
+                <p class="rooms-panel-copy">Explore storefronts and find your next creator.</p>
+              </div></div>
+              <p id="storesDirectoryStatus" class="helper-text" role="status"></p>
+              <div class="store-directory-grid" id="storesDirectoryGrid"></div>
             </section>
           </div>
         </section>
@@ -205,9 +214,10 @@
             <div id="roomMentionSuggestions" class="mention-suggestions hidden" role="listbox" aria-label="Mention a room member"></div>
             <form class="store-chat-form room-chat-form" id="roomMessageForm">
               <label class="visually-hidden" for="roomMessageInput">Message this room</label>
-              <textarea id="roomMessageInput" name="message" rows="3" maxlength="10000" placeholder="Write a message, @mention someone, or paste code…" aria-describedby="roomTypingIndicator"></textarea>
+              <textarea id="roomMessageInput" name="message" rows="3" maxlength="10000" placeholder="Write a message, @mention someone, or paste code…" aria-describedby="roomTypingIndicator roomComposeHint"></textarea>
               <button type="submit" class="primary-btn">Send</button>
             </form>
+            <p id="roomComposeHint" class="helper-text">Enter to send · Shift+Enter for a new line</p>
           </div>
         </section>
       </div>
@@ -1125,6 +1135,6 @@
 
     <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=9" defer></script>
+    <script src="app.bundle.js?v=12" defer></script>
   </body>
 </html>

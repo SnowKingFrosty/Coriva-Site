@@ -39,7 +39,10 @@ function renderNotifications(){
   // Count an inbox thread only if it has no unread durable message notification.
   const alertedChats=new Set(notificationItems.filter(item=>!item.data().read).map(item=>item.data().conversationId));
   const extra=[...chatWatchers.values()].filter(entry=>entry.message?.senderUid!==uid() && chatTime(entry.message)>timestamp(entry.readAt) && !alertedChats.has(entry.id)).length;
-  $('notificationCount').textContent=unread+extra?` (${unread+extra})`:'';
+  const totalUnread=unread+extra, badge=$('notificationCount');
+  badge.textContent=totalUnread>99?'99+':String(totalUnread);
+  badge.classList.toggle('hidden',totalUnread===0);
+  $('notificationsButton').setAttribute('aria-label',totalUnread?`Notifications, ${totalUnread} unread`:'Notifications');
 }
 async function openConversation(id){
   const token=session;
