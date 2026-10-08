@@ -1,3 +1,3 @@
 window.CORIVA_MEDIA_CONFIG = {
-  uploadUrl: ''
+  uploadUrl: 'https://coriva-imagekits-uploads.coriva-uploads.workers.dev/upload'
 };
