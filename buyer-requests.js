@@ -92,7 +92,8 @@ export function initBuyerRequests(api){
  function takeDownButton(r){return button('Take down request',async()=>{if(confirm(r.status==='active'?'Take down this request? The assigned creator will be notified and the project will stop being active.':'Take down this request? It will be removed from Buyer requests.'))await withdrawRequest(r.id);});}
  function renderTasks(){
   const uid=auth.currentUser?.uid;const list=$('tasksList');list.replaceChildren();
-  const mine=requests.filter(r=>uid && (r.assignedUid===uid || r.buyerUid===uid));
+  if(!api.isCreator())return;
+  const mine=requests.filter(r=>uid && r.assignedUid===uid);
   for(const r of mine.sort((a,b)=>(a.status==='completed')-(b.status==='completed'))){const card=baseCard(r);
    card.append(el('p','helper-text',r.buyerUid===uid?'Your buyer request':'Your assigned project'));
    if(r.assignedUid===uid && r.status==='active')card.append(button('Complete Job',async()=>{if(confirm('Mark this project complete and notify the buyer?'))await completeRequest(r.id);}));
@@ -100,7 +101,7 @@ export function initBuyerRequests(api){
    if(r.storeId)card.append(button('Open storefront',()=>api.openStore(r.storeId)));
    list.append(card);
   }
-  if(!mine.length)list.append(el('p','empty-state','Your posted requests and projects awarded to your store will appear here.'));
+  if(!mine.length)list.append(el('p','empty-state','Projects awarded to your store will appear here.'));
  }
  function openRequest(id){
   const request=requests.find(r=>r.id===id);if(!request)throw Error('This buyer request is unavailable.');
@@ -121,12 +122,13 @@ export function initBuyerRequests(api){
   api.openModal($('requestDetailModal'));
  }
  function showTasks(){
+  if(!api.isCreator()){refreshRole();return;}
   if(!api.requireAuth())return;
   document.querySelector('.page-shell').classList.add('hidden');$('notificationsPage').classList.add('hidden');
   document.querySelectorAll('.modal-overlay,.storefront-page,.room-page').forEach(n=>n.classList.add('hidden'));
   $('tasksPage').classList.remove('hidden');$('tasksPage').setAttribute('aria-hidden','false');renderTasks();window.scrollTo(0,0);
  }
- for(const id of ['tasksButton','notificationTasksButton'])$(id).onclick=()=>{if(api.requireAuth()){location.hash='tasks';showTasks();}};
+ for(const id of ['tasksButton','notificationTasksButton'])$(id).onclick=()=>{if(api.isCreator() && api.requireAuth()){location.hash='tasks';showTasks();}};
  $('closeTasks').onclick=()=>{location.hash='feed';$('tasksPage').classList.add('hidden');document.querySelector('.page-shell').classList.remove('hidden');};
  $('tasksNotificationsButton').onclick=()=>{location.hash='notifications';};
  window.addEventListener('hashchange',()=>{if(location.hash==='#tasks')showTasks();else{$('tasksPage').classList.add('hidden');$('tasksPage').setAttribute('aria-hidden','true');}});
@@ -137,7 +139,18 @@ export function initBuyerRequests(api){
   try{await postBuyerRequest({title:form.elements.title.value,description:form.elements.description.value,budget:form.elements.budget.value,currency:form.elements.currency.value});api.closeModal($('buyerRequestModal'));}catch(error){$('buyerRequestFormStatus').textContent=error.code==='permission-denied' || error.code==='firestore/permission-denied' ? 'Posting was blocked by Firestore rules. Publish the updated firestore.rules in Firebase Console → Firestore Database → Rules, then refresh and try again.' : error.message;}finally{submit.disabled=false;}
  };
  $('applyRequestForm').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,submit=form.querySelector('[type=submit]');if(submit.disabled)return;submit.disabled=true;try{await applyToRequest(form.dataset.requestId,$('applyStoreSelect').value);api.closeModal($('applyRequestModal'));$('requestsStatus').textContent='Application sent. The buyer will choose a store.';}catch(error){$('applyRequestStatus').textContent=error.message;}finally{submit.disabled=false;}};
- onAuthStateChanged(auth,user=>{detailId=null;appStops.forEach(stop=>stop());appStops=[];$('tasksButton').classList.toggle('hidden',!user);if(!user){$('tasksPage').classList.add('hidden');['requestDetailModal','applyRequestModal','buyerRequestModal'].forEach(id=>api.closeModal($(id)));}render();if(user && location.hash==='#tasks')showTasks();});
+ function refreshRole(){
+  const creator=api.isCreator();
+  for(const id of ['tasksButton','notificationTasksButton'])$(id).classList.toggle('hidden',!creator);
+  if(!creator){
+   $('tasksPage').classList.add('hidden');$('tasksPage').setAttribute('aria-hidden','true');$('tasksList').replaceChildren();
+   if(location.hash==='#tasks' && api.profile()){
+    const url=new URL(location.href);url.hash='feed';history.replaceState(null,'',url);
+    $('notificationsPage').classList.add('hidden');document.querySelector('.page-shell').classList.remove('hidden');
+   }
+  }else if(location.hash==='#tasks')showTasks();
+ }
+ onAuthStateChanged(auth,user=>{detailId=null;appStops.forEach(stop=>stop());appStops=[];refreshRole();if(!user){$('tasksPage').classList.add('hidden');['requestDetailModal','applyRequestModal','buyerRequestModal'].forEach(id=>api.closeModal($(id)));}render();});
  onSnapshot(collection(db,'buyerRequests'),snapshot=>{requests=snapshot.docs.map(s=>({id:s.id,...s.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));render();if(detailId)openRequest(detailId);},error=>{$('requestsStatus').textContent=error.message;});
- return {render,openRequest,refreshStores:render};
+ return {render,openRequest,refreshStores:render,refreshRole};
 }

@@ -420,6 +420,7 @@ const renderProfileArea = () => {
     if (link) profileSocialLinks.append(link);
   });
 
+  buyerRequests.refreshRole();
   document.getElementById('storefronts').classList.toggle('hidden', !isAuthenticated || currentProfile?.accountType === 'shopper');
   profileLoginButton.classList.toggle('hidden', isAuthenticated);
   profileEditButton.classList.toggle('hidden', !isAuthenticated);
@@ -3486,6 +3487,7 @@ bindCurrencyPicker(quoteForm, updateQuoteTotalPreview);
 
 const buyerRequests = initBuyerRequests({
   requireAuth, openModal, closeModal, search: () => discoverSearchQuery, stores: () => stores,
+  isCreator: () => isAuthenticated && Boolean(currentProfile) && currentProfile.accountType !== 'shopper', profile: () => currentProfile,
   openStore: id => { const store = stores.find(s => s.id === id); if (store) openStoreTemplate(store); else window.alert('This storefront is unavailable.'); }
 });
 

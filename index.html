@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=19" />
+    <link rel="stylesheet" href="styles.css?v=20" />
   </head>
   <body>
     <div class="page-shell">
@@ -1115,7 +1115,7 @@
     </section></div>
     <main id="tasksPage" class="notifications-page hidden" aria-hidden="true">
       <header class="topbar"><div><p class="template-eyebrow">Coriva</p><h1>Tasks</h1></div><button type="button" id="tasksNotificationsButton" class="secondary-btn">Notifications</button><button type="button" id="closeTasks" class="secondary-btn">Back to Coriva</button></header>
-      <section class="glass-card jobs-section"><h2>Your projects</h2><p class="helper-text">Track projects awarded to your store and manage your buyer requests.</p><p id="tasksStatus" class="account-status" role="status"></p><div id="tasksList" class="request-grid"></div></section>
+      <section class="glass-card jobs-section"><h2>Your projects</h2><p class="helper-text">Track projects awarded to your store.</p><p id="tasksStatus" class="account-status" role="status"></p><div id="tasksList" class="request-grid"></div></section>
     </main>
     <div id="buyerRequestModal" class="modal-overlay hidden" aria-hidden="true"><section class="invoice-modal glass-card" role="dialog" aria-modal="true" aria-labelledby="buyerRequestTitle"><button type="button" id="closeBuyerRequest" class="modal-close" aria-label="Close">×</button><h2 id="buyerRequestTitle">Post a buyer request</h2>
       <form id="buyerRequestForm" class="store-form"><label>Project title<input name="title" required minlength="3" maxlength="100" /></label><label>What do you need?<textarea name="description" rows="5" required minlength="20" maxlength="3000"></textarea></label><label>Budget<input name="budget" type="number" min="1" max="10000000" step="0.01" required /></label><label>Currency<select name="currency"><option>USD</option><option>CAD</option><option>EUR</option><option>GBP</option><option>AUD</option></select></label><p class="helper-text">Your title, description, and budget are public. Leave contact details out of your listing.</p><p id="buyerRequestFormStatus" role="status"></p><button type="submit" class="primary-btn">Post request</button></form>
@@ -1124,7 +1124,7 @@
     <div id="requestDetailModal" class="modal-overlay hidden" aria-hidden="true"><section class="invoice-modal glass-card" role="dialog" aria-modal="true" aria-label="Buyer request details"><button type="button" id="closeRequestDetail" class="modal-close" aria-label="Close">×</button><p id="requestDetailStatus" role="status"></p><div id="requestDetail"></div></section></div>
 
     <main id="notificationsPage" class="notifications-page hidden" aria-hidden="true">
-      <header class="topbar"><div><p class="template-eyebrow">Coriva</p><h1>Notifications &amp; jobs</h1></div><button type="button" class="secondary-btn" id="notificationTasksButton">Tasks</button><button type="button" class="secondary-btn" id="closeNotifications">Back to Coriva</button></header>
+      <header class="topbar"><div><p class="template-eyebrow">Coriva</p><h1>Notifications &amp; jobs</h1></div><button type="button" class="secondary-btn hidden" id="notificationTasksButton">Tasks</button><button type="button" class="secondary-btn" id="closeNotifications">Back to Coriva</button></header>
       <p id="jobsStatus" class="account-status" aria-live="polite"></p>
       <div class="jobs-layout">
         <section class="glass-card jobs-section"><h2>Notifications</h2><p class="helper-text">Your latest 100 updates</p><div id="notificationList" class="jobs-list"></div></section>
@@ -1157,6 +1157,6 @@
 
     <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=19" defer></script>
+    <script src="app.bundle.js?v=20" defer></script>
   </body>
 </html>
