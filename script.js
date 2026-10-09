@@ -1,6 +1,7 @@
 import { initRoomSearch, matchesRoomQuery, parseSearchQuery } from './room-search.js';
 import { createRoomTools, renderChatContent, createAvatar, avatarURL } from './room-chat.js';
 import { uploadMediaBlob } from './imagekit-media.js';
+import { initStoreMessages, createPaymentCard, paymentURL, sendStorePayment } from './store-messages.js';
 import { initBuyerRequests } from './buyer-requests.js';
 import { initJobs } from './jobs.js';
 import { COUNTRIES } from './countries.js';
@@ -421,6 +422,7 @@ const renderProfileArea = () => {
   });
 
   buyerRequests.refreshRole();
+  storeMessages.refreshRole();
   document.getElementById('storefronts').classList.toggle('hidden', !isAuthenticated || currentProfile?.accountType === 'shopper');
   profileLoginButton.classList.toggle('hidden', isAuthenticated);
   profileEditButton.classList.toggle('hidden', !isAuthenticated);
@@ -1727,6 +1729,7 @@ const renderStorefrontPage = (store) => {
   }
   const editor = document.querySelector('.storefront-editor');
   if (!isOwner) isManagingStorefront = false;
+  document.getElementById('storefrontMessagesButton').classList.toggle('hidden', !isOwner || currentProfile?.accountType === 'shopper');
   manageStorefrontButton.classList.toggle('hidden', !isOwner);
   manageStorefrontButton.setAttribute('aria-expanded', String(isOwner && isManagingStorefront));
   manageStorefrontButton.textContent = isManagingStorefront ? 'Done managing' : 'Manage storefront';
@@ -1798,6 +1801,9 @@ const renderStorefrontPage = (store) => {
 
   storeTemplateForm.elements.storeId.value = store.id;
   storeTemplateForm.elements.storeBio.value = store.bio || '';
+  storeTemplateForm.elements.storePaymentUrl.value = store.paymentUrl || '';
+  storeTemplateForm.elements.storePaymentLabel.value = store.paymentLabel || 'Payment link';
+  updateStorePaymentPreview();
   storefrontBioEditor.classList.add('hidden');
   storefrontBioAction.setAttribute('aria-expanded', 'false');
   storefrontBioAction.querySelector('.upload-plus').textContent = '+';
@@ -1870,6 +1876,21 @@ const renderStoreDetails = (store) => {
   storeDetailContent.append(messageButton);
 };
 
+const updateStorePaymentPreview = () => {
+ const preview = document.getElementById('storePaymentPreview');preview.replaceChildren();
+ const raw = storeTemplateForm.elements.storePaymentUrl.value.trim();if(!raw)return;
+ try { preview.append(createPaymentCard({paymentUrl:paymentURL(raw),paymentLabel:storeTemplateForm.elements.storePaymentLabel.value.trim() || 'Payment link'})); }
+ catch { preview.append(createElement('p','helper-text','Enter an HTTPS payment link to preview its QR code.')); }
+};
+storeTemplateForm.elements.storePaymentUrl.addEventListener('change',updateStorePaymentPreview);
+storeTemplateForm.elements.storePaymentLabel.addEventListener('change',updateStorePaymentPreview);
+document.getElementById('sendStoreChatPayment').addEventListener('click',async event=>{
+ const button=event.currentTarget;if(button.disabled || !activeChatConversationId)return;button.disabled=true;
+ try { await sendStorePayment(activeChatConversationId,currentProfile); }
+ catch(error){ window.alert(error.message); }
+ finally{button.disabled=false;}
+});
+
 const renderStoreChat = () => {
   storeChatThread.replaceChildren();
   const messages = chats[activeChatConversationId] || [];
@@ -1882,7 +1903,7 @@ const renderStoreChat = () => {
     const bubble = createElement('div', `chat-message${message.senderUid === auth.currentUser?.uid ? ' mine' : ''}`);
     const identity = createElement('div', 'room-message-identity');
     identity.append(createAvatar(message.senderPhotoURL, message.senderUsername), createElement('strong', '', message.senderUid === auth.currentUser?.uid ? 'You' : message.senderUsername || 'Other participant'));
-    bubble.append(identity, renderChatContent(message.text));
+    bubble.append(identity, message.type === 'payment' ? createPaymentCard(message) : renderChatContent(message.text));
     const createdAt = message.createdAt?.toDate ? message.createdAt.toDate() : new Date(message.createdAt);
     bubble.append(createElement('time', '', createdAt.toLocaleString()));
     storeChatThread.append(bubble);
@@ -1919,6 +1940,10 @@ const openStoreChat = (store, existingConversation = null) => {
     .catch(showCloudError);
   document.getElementById('storeChatTitle').textContent = `Chat with ${store.name}`;
   chatStoreContext.textContent = `${store.handle} · ${store.category}`;
+  const paymentButton=document.getElementById('sendStoreChatPayment');
+  paymentButton.classList.toggle('hidden',store.ownerUid!==auth.currentUser.uid || currentProfile?.accountType==='shopper');
+  paymentButton.disabled=!store.paymentUrl;
+  paymentButton.title=store.paymentUrl?'Send your saved payment details':'Save a payment link in Manage storefront first';
   renderStoreChat();
   closeModal(storeDetailModal);
   closeModal(storeTemplateModal);
@@ -3310,6 +3335,10 @@ storeTemplateForm.addEventListener('submit', async (event) => {
     return;
   }
 
+  let savedPaymentUrl;
+  try { const raw=storeTemplateForm.elements.storePaymentUrl.value.trim();savedPaymentUrl=raw?paymentURL(raw):''; }
+  catch(error){storeTemplateStatus.textContent=error.message;storeTemplateStatus.classList.add('error');return;}
+  const savedPaymentLabel=storeTemplateForm.elements.storePaymentLabel.value.trim() || 'Payment link';
   const files = Array.from(storeTemplateMedia.files || []);
   const logoFile = storeLogoInput.files?.[0];
   const bannerFile = storeBannerInput.files?.[0];
@@ -3341,6 +3370,7 @@ storeTemplateForm.addEventListener('submit', async (event) => {
     const updatedStore = {
       ...store,
       bio: storeTemplateForm.elements.storeBio.value.trim(),
+      paymentUrl: savedPaymentUrl, paymentLabel: savedPaymentLabel,
       logo,
       banner,
       socialLinks: socialInputs.map((input) => input.value.trim()).filter(Boolean).map((url) => new URL(url).href),
@@ -3485,6 +3515,11 @@ initializeAccountCountry();
 bindCurrencyPicker(invoiceForm, updateInvoiceTotalPreview);
 bindCurrencyPicker(quoteForm, updateQuoteTotalPreview);
 
+const storeMessages = initStoreMessages({
+  isCreator: () => isAuthenticated && Boolean(currentProfile) && currentProfile.accountType !== 'shopper',
+  profile: () => currentProfile, store: () => stores.find(store => store.id === activeStorefrontId),
+  openStore: id => { const store = stores.find(s => s.id === id); if(store)openStoreTemplate(store); }
+});
 const buyerRequests = initBuyerRequests({
   requireAuth, openModal, closeModal, search: () => discoverSearchQuery, stores: () => stores,
   isCreator: () => isAuthenticated && Boolean(currentProfile) && currentProfile.accountType !== 'shopper', profile: () => currentProfile,

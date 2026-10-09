@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=20" />
+    <link rel="stylesheet" href="styles.css?v=21" />
   </head>
   <body>
     <div class="page-shell">
@@ -427,7 +427,7 @@
       <header class="storefront-page-nav">
         <button type="button" class="secondary-btn" id="closeStoreTemplate">← Back to Coriva</button>
         <span class="storefront-page-label">Creator storefront</span>
-        <div class="storefront-nav-actions"><button type="button" class="primary-btn hidden" id="manageStorefrontButton" aria-expanded="false">Manage storefront</button><button type="button" class="secondary-btn" id="shareStorefrontButton">Share</button></div>
+        <div class="storefront-nav-actions"><button type="button" class="primary-btn hidden" id="manageStorefrontButton" aria-expanded="false">Manage storefront</button><button type="button" class="secondary-btn hidden" id="storefrontMessagesButton">Messages</button><button type="button" class="secondary-btn" id="shareStorefrontButton">Share</button></div>
       </header>
       <div class="storefront-page-content">
         <section class="storefront-hero" id="storefrontHero">
@@ -515,6 +515,9 @@
               <div class="invoice-list" id="invoiceList">
                 <p class="empty-state">No invoices yet.</p>
               </div>
+            </section>
+            <section class="template-section">
+              <h3>Saved payment link &amp; QR code</h3><label>Payment label<input name="storePaymentLabel" maxlength="100" placeholder="Payment link" /></label><label>Payment link<input name="storePaymentUrl" type="url" maxlength="1000" placeholder="https://…" /></label><p class="helper-text">Save your storefront to keep this link and matching QR code ready to send in buyer chats. Leave the link blank to remove it.</p><div id="storePaymentPreview"></div>
             </section>
             <section class="template-section">
               <h3>Connect</h3>
@@ -703,6 +706,7 @@
           </div>
         </div>
         <div class="store-chat-thread" id="storeChatThread" role="log" aria-live="polite"></div>
+<button type="button" id="sendStoreChatPayment" class="secondary-btn hidden">Send saved payment link &amp; QR</button>
         <form id="storeChatForm" class="store-chat-form">
           <label class="visually-hidden" for="storeChatMessage">Your message</label>
           <input id="storeChatMessage" name="message" type="text" maxlength="500" placeholder="Write a message..." required />
@@ -1113,6 +1117,17 @@
       <label class="share-storefront-label" for="shareStorefrontLink">Direct storefront link</label><input type="url" id="shareStorefrontLink" readonly />
       <button type="button" id="copyStorefrontLink" class="primary-btn">Copy link</button><p id="shareStorefrontStatus" role="status" aria-live="polite"></p>
     </section></div>
+    <main id="storeMessagesPage" class="store-messages-page hidden" aria-hidden="true">
+      <header class="topbar"><h1 id="storeMessagesTitle">Storefront messages</h1><button type="button" class="secondary-btn" id="closeStoreMessages">Back to storefront</button></header>
+      <p id="storeMessagesStatus" class="account-status" role="status"></p>
+      <div class="store-messages-layout">
+        <aside class="glass-card jobs-section"><h2>Conversations</h2><div id="storeConversations" class="jobs-list"></div></aside>
+        <section class="glass-card jobs-section creator-conversation"><h2 id="creatorConversationTitle">Buyer messages</h2><div id="creatorMessageThread" class="store-chat-thread" role="log" aria-live="polite"></div>
+          <form id="creatorMessageComposer" class="store-chat-form hidden"><label class="visually-hidden" for="creatorMessageText">Message</label><input id="creatorMessageText" name="message" type="text" maxlength="500" placeholder="Write a message…" required /><button type="submit" class="primary-btn">Send</button></form>
+          <div id="creatorPaymentActions" class="creator-payment-form hidden"><button type="button" class="primary-btn" id="sendCreatorPayment">Send saved payment link &amp; QR</button><p class="helper-text">Uses the payment link saved in Manage storefront.</p></div>
+        </section>
+      </div>
+    </main>
     <main id="tasksPage" class="notifications-page hidden" aria-hidden="true">
       <header class="topbar"><div><p class="template-eyebrow">Coriva</p><h1>Tasks</h1></div><button type="button" id="tasksNotificationsButton" class="secondary-btn">Notifications</button><button type="button" id="closeTasks" class="secondary-btn">Back to Coriva</button></header>
       <section class="glass-card jobs-section"><h2>Your projects</h2><p class="helper-text">Track projects awarded to your store.</p><p id="tasksStatus" class="account-status" role="status"></p><div id="tasksList" class="request-grid"></div></section>
@@ -1157,6 +1172,6 @@
 
     <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=20" defer></script>
+    <script src="app.bundle.js?v=21" defer></script>
   </body>
 </html>

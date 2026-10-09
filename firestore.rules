@@ -399,14 +399,25 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if isConversationParticipant(conversationId);
         allow create: if isConversationParticipant(conversationId)
-          && request.resource.data.keys().hasOnly(['senderUid','senderUsername','senderPhotoURL','text','createdAt'])
+          && request.resource.data.keys().hasOnly(['senderUid','senderUsername','senderPhotoURL','text','createdAt','type','paymentUrl','paymentLabel'])
           && request.resource.data.createdAt == request.time
           && (!request.resource.data.keys().hasAny(['senderUsername']) || (request.resource.data.senderUsername is string && request.resource.data.senderUsername.size() <= 100))
           && (!request.resource.data.keys().hasAny(['senderPhotoURL']) || (request.resource.data.senderPhotoURL is string && request.resource.data.senderPhotoURL.size() <= 2048))
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 500;
+          && request.resource.data.text.size() <= 500
+          && (!request.resource.data.keys().hasAny(['type','paymentUrl','paymentLabel']) || (
+            request.resource.data.type == 'payment'
+            && request.resource.data.paymentUrl is string
+            && request.resource.data.paymentUrl.size() > 8 && request.resource.data.paymentUrl.size() <= 1000
+            && request.resource.data.paymentUrl.matches('https://[^ ]+')
+            && request.resource.data.paymentLabel is string
+            && request.resource.data.paymentLabel.size() >= 1 && request.resource.data.paymentLabel.size() <= 100
+            && get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.ownerUid == request.auth.uid
+            && request.resource.data.paymentUrl == get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.paymentUrl
+            && request.resource.data.paymentLabel == get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.paymentLabel
+          ));
         allow update, delete: if false;
       }
     }
