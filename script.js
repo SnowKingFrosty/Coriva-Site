@@ -253,6 +253,7 @@ let currentProfile = readStoredValue(profileStorageKey, null);
 let editingStoreId = null;
 let activeFeedFilter = 'all';
 let discoverSearchQuery = '';
+const paymentQrDrafts = new Map();
 let activeChatConversationId = null;
 let activeChatUnsubscribe = null;
 let activeStorefrontId = null;
@@ -1803,6 +1804,7 @@ const renderStorefrontPage = (store) => {
   storeTemplateForm.elements.storeBio.value = store.bio || '';
   storeTemplateForm.elements.storePaymentUrl.value = store.paymentUrl || '';
   storeTemplateForm.elements.storePaymentLabel.value = store.paymentLabel || 'Payment link';
+  document.getElementById('storePaymentQrInput').value='';
   updateStorePaymentPreview();
   storefrontBioEditor.classList.add('hidden');
   storefrontBioAction.setAttribute('aria-expanded', 'false');
@@ -1879,9 +1881,20 @@ const renderStoreDetails = (store) => {
 const updateStorePaymentPreview = () => {
  const preview = document.getElementById('storePaymentPreview');preview.replaceChildren();
  const raw = storeTemplateForm.elements.storePaymentUrl.value.trim();if(!raw)return;
- try { preview.append(createPaymentCard({paymentUrl:paymentURL(raw),paymentLabel:storeTemplateForm.elements.storePaymentLabel.value.trim() || 'Payment link'})); }
+ const draft=paymentQrDrafts.get(activeStorefrontId),store=stores.find(s=>s.id===activeStorefrontId);
+ const qr=draft?.remove?'':draft?.dataUrl || store?.paymentQrUrl || '';
+ try { preview.append(createPaymentCard({paymentUrl:paymentURL(raw),paymentLabel:storeTemplateForm.elements.storePaymentLabel.value.trim() || 'Payment link',paymentQrUrl:qr})); }
  catch { preview.append(createElement('p','helper-text','Enter an HTTPS payment link to preview its QR code.')); }
 };
+document.getElementById('storePaymentQrInput').addEventListener('change',async event=>{
+ const input=event.currentTarget,file=input.files?.[0],store=stores.find(s=>s.id===activeStorefrontId);
+ if(!file || !store || store.ownerUid!==auth.currentUser?.uid)return;
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size>5*1024*1024){storeTemplateStatus.textContent='Choose a PNG, JPG or WebP QR image up to 5 MB.';storeTemplateStatus.classList.add('error');input.value='';return;}
+ const draft={file};paymentQrDrafts.set(store.id,draft);
+ try {draft.dataUrl=await rawFileDataUrl(file);if(paymentQrDrafts.get(store.id)!==draft)return;updateStorePaymentPreview();storeTemplateStatus.textContent='QR image selected. Save storefront to keep it.';storeTemplateStatus.classList.remove('error');}
+ catch(error){paymentQrDrafts.delete(store.id);storeTemplateStatus.textContent=error.message;}
+});
+document.getElementById('removeStorePaymentQr').addEventListener('click',()=>{paymentQrDrafts.set(activeStorefrontId,{remove:true});document.getElementById('storePaymentQrInput').value='';updateStorePaymentPreview();});
 storeTemplateForm.elements.storePaymentUrl.addEventListener('change',updateStorePaymentPreview);
 storeTemplateForm.elements.storePaymentLabel.addEventListener('change',updateStorePaymentPreview);
 document.getElementById('sendStoreChatPayment').addEventListener('click',async event=>{
@@ -1942,8 +1955,8 @@ const openStoreChat = (store, existingConversation = null) => {
   chatStoreContext.textContent = `${store.handle} · ${store.category}`;
   const paymentButton=document.getElementById('sendStoreChatPayment');
   paymentButton.classList.toggle('hidden',store.ownerUid!==auth.currentUser.uid || currentProfile?.accountType==='shopper');
-  paymentButton.disabled=!store.paymentUrl;
-  paymentButton.title=store.paymentUrl?'Send your saved payment details':'Save a payment link in Manage storefront first';
+  paymentButton.disabled=!store.paymentUrl || !store.paymentQrUrl;
+  paymentButton.title=store.paymentUrl?'Send your saved payment details':'Save a payment link and upload your QR code in Manage storefront first';
   renderStoreChat();
   closeModal(storeDetailModal);
   closeModal(storeTemplateModal);
@@ -3338,6 +3351,8 @@ storeTemplateForm.addEventListener('submit', async (event) => {
   let savedPaymentUrl;
   try { const raw=storeTemplateForm.elements.storePaymentUrl.value.trim();savedPaymentUrl=raw?paymentURL(raw):''; }
   catch(error){storeTemplateStatus.textContent=error.message;storeTemplateStatus.classList.add('error');return;}
+  const qrDraft=paymentQrDrafts.get(store.id);
+  if(savedPaymentUrl && !qrDraft?.file && (qrDraft?.remove || !store.paymentQrUrl)){storeTemplateStatus.textContent='Upload your payment QR code before saving payment details.';storeTemplateStatus.classList.add('error');return;}
   const savedPaymentLabel=storeTemplateForm.elements.storePaymentLabel.value.trim() || 'Payment link';
   const files = Array.from(storeTemplateMedia.files || []);
   const logoFile = storeLogoInput.files?.[0];
@@ -3352,7 +3367,10 @@ storeTemplateForm.addEventListener('submit', async (event) => {
     return;
   }
 
+  if(storeTemplateForm.dataset.saving==='true')return;
+  storeTemplateForm.dataset.saving='true';document.getElementById('publishStoreTemplate').disabled=true;document.getElementById('storePaymentQrInput').disabled=true;
   try {
+    const paymentQrUrl = savedPaymentUrl ? (qrDraft?.file ? await uploadMediaBlob(qrDraft.file) : store.paymentQrUrl || '') : '';
     const selectedMedia = files.length
       ? await Promise.all(files.map(async (file) => ({ type: imageFileType(file), data: await readImageFile(file) })))
       : store.media?.length
@@ -3370,7 +3388,7 @@ storeTemplateForm.addEventListener('submit', async (event) => {
     const updatedStore = {
       ...store,
       bio: storeTemplateForm.elements.storeBio.value.trim(),
-      paymentUrl: savedPaymentUrl, paymentLabel: savedPaymentLabel,
+      paymentUrl: savedPaymentUrl, paymentLabel: savedPaymentLabel, paymentQrUrl,
       logo,
       banner,
       socialLinks: socialInputs.map((input) => input.value.trim()).filter(Boolean).map((url) => new URL(url).href),
@@ -3384,11 +3402,12 @@ storeTemplateForm.addEventListener('submit', async (event) => {
     renderStores();
     renderManagedStores();
     renderPostStoreOptions();
+    paymentQrDrafts.delete(store.id);
     renderStorefrontPage(updatedStore);
   } catch (error) {
     storeTemplateStatus.textContent = `Unable to save storefront: ${error.message}`;
     storeTemplateStatus.classList.add('error');
-  }
+  } finally {storeTemplateForm.dataset.saving='false';document.getElementById('publishStoreTemplate').disabled=false;document.getElementById('storePaymentQrInput').disabled=false;}
 });
 
 

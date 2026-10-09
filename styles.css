@@ -3069,3 +3069,13 @@ button:focus-visible { outline:2px solid #67d5ff; outline-offset:3px; }
 .payment-message-qr { padding: 12px; background: white; color: #111; border-radius: 10px; max-width: 100%; }
 .payment-message-qr img,.payment-message-qr canvas { display: block; max-width: 100%; height: auto; }
 @media(max-width: 700px) { .store-messages-layout { grid-template-columns: minmax(0,1fr); } #storeConversations { max-height: 30dvh; } .store-messages-page { padding: .75rem; } }
+
+.payment-settings-section { display: grid; gap: .85rem; }
+.payment-settings-section > label:not(.storefront-file-picker) { display: grid; gap: .45rem; font-size: .9rem; font-weight: 600; }
+.payment-settings-section input[type="url"], .payment-settings-section input[name="storePaymentLabel"], #creatorMessageComposer input, #storeChatMessage {
+ width: 100%; min-width: 0; padding: .9rem .95rem; border: 1px solid var(--line); border-radius: 12px; background: rgba(10,15,26,.8); color: var(--text); font: inherit; transition: border-color .15s, box-shadow .15s;
+}
+.payment-settings-section input:focus-visible, #creatorMessageComposer input:focus-visible, #storeChatMessage:focus-visible { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(126,246,212,.12); }
+.payment-settings-section input::placeholder, #creatorMessageComposer input::placeholder, #storeChatMessage::placeholder { color: var(--muted); }
+.payment-settings-section .storefront-file-picker, #removeStorePaymentQr { max-width: 100%; justify-self: start; }
+.payment-message-qr img { width: 180px; height: auto; object-fit: contain; }

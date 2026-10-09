@@ -1,21 +1,21 @@
 import {auth,db,collection,doc,query,where,orderBy,limit,onSnapshot,onAuthStateChanged,getDoc,addDoc,setDoc,serverTimestamp} from './firebase.js';
 import {createAvatar,renderChatContent,avatarURL} from './room-chat.js';
 const el=(tag,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
-let qrLoading;
-function loadQR(){
- if(window.QRCode)return Promise.resolve(window.QRCode);
- if(!qrLoading)qrLoading=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/qrcode.min.js';script.onload=()=>resolve(window.QRCode);script.onerror=()=>{script.remove();qrLoading=null;reject(Error('QR code could not load. Use the payment link.'));};document.head.append(script);});
- return qrLoading;
-}
 export function paymentURL(value){const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || url.href.length>1000)throw Error('Use a valid HTTPS payment link, up to 1,000 characters.');return url.href;}
+export function validPaymentQR(value){
+ try{const url=new URL(value);return url.protocol==='https:' && !url.username && !url.password && url.href.length<=2048;}catch{return false;}
+}
 export function createPaymentCard(message){
  const card=el('div','payment-message-card');let url;
  try{url=paymentURL(message.paymentUrl);}catch{return el('p','helper-text','This payment link is unavailable.');}
  card.append(el('strong','',message.paymentLabel || 'Payment link'));
  const link=el('a','primary-btn','Open payment link');link.href=url;link.target='_blank';link.rel='noopener noreferrer';card.append(link);
  card.append(el('span','helper-text',new URL(url).hostname));
- const qr=el('div','payment-message-qr');qr.setAttribute('role','img');qr.setAttribute('aria-label','QR code for this payment link');card.append(qr);
- loadQR().then(QR=>{new QR(qr,{text:url,width:160,height:160,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QR.CorrectLevel.M});}).catch(error=>{qr.replaceChildren(el('p','helper-text',error.message));});
+ const qr=el('div','payment-message-qr');
+ if(validPaymentQR(message.paymentQrUrl) || /^data:image\/(png|jpeg|webp);base64,/i.test(message.paymentQrUrl || '')){
+  const image=el('img');image.src=message.paymentQrUrl;image.alt='Uploaded payment QR code';image.addEventListener('error',()=>{qr.replaceChildren(el('p','helper-text','The QR image could not load. Use the payment link above.'));},{once:true});qr.append(image);
+ }else qr.append(el('p','helper-text','No uploaded QR code is attached. Use the payment link above.'));
+ card.append(qr);
  return card;
 }
 export async function sendStorePayment(conversationId,profile){
@@ -27,8 +27,9 @@ export async function sendStorePayment(conversationId,profile){
  if(!store.data().paymentUrl)throw Error('Save a payment link in Manage storefront before sending it.');
  const url=paymentURL(store.data().paymentUrl),label=String(store.data().paymentLabel || 'Payment link').trim();
  if(!label || label.length>100)throw Error('Save a payment label of 1–100 characters.');
+ if(!validPaymentQR(store.data().paymentQrUrl))throw Error('Upload your payment QR code in Manage storefront before sending it.');
  if(auth.currentUser?.uid!==user.uid)throw Error('Your session changed. Please try again.');
- return addDoc(collection(db,'chats',conversationId,'messages'),{senderUid:user.uid,senderUsername:profile?.username || 'Creator',senderPhotoURL:avatarURL(profile?.profilePicture),text:`Payment link: ${label}`,type:'payment',paymentUrl:url,paymentLabel:label,createdAt:serverTimestamp()});
+ return addDoc(collection(db,'chats',conversationId,'messages'),{senderUid:user.uid,senderUsername:profile?.username || 'Creator',senderPhotoURL:avatarURL(profile?.profilePicture),text:`Payment link: ${label}`,type:'payment',paymentUrl:url,paymentLabel:label,paymentQrUrl:store.data().paymentQrUrl,createdAt:serverTimestamp()});
 }
 export function initStoreMessages(api){
  const $=id=>document.getElementById(id);let store=null,conversation=null,stopInbox,stopThread,watchers=new Map(),session=0;
