@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=23" />
+    <link rel="stylesheet" href="styles.css?v=24" />
   </head>
   <body>
     <div class="page-shell">
@@ -107,7 +107,12 @@
             <span class="visually-hidden" id="discoverSearchStatus" aria-live="polite"></span>
           </form>
 
-          <div class="post-list" id="discoverFeed" aria-live="polite">
+          <div class="feed-viewer" id="feedViewer">
+            <div class="feed-viewer-toolbar" id="feedViewerToolbar">
+              <span class="feed-viewer-title">For you</span>
+              <button type="button" class="secondary-btn" id="feedFullscreenButton" aria-controls="feedViewer" aria-pressed="false">Full screen</button>
+            </div>
+          <div class="post-list" id="discoverFeed" aria-live="polite" tabindex="0" aria-label="For you posts">
             <article class="post-card glass-card empty-feed-card" id="feedEmptyState">
               <div class="empty-post">
                 <h2>Your Discover feed is ready</h2>
@@ -140,6 +145,7 @@
               <div class="panel-header"><div><h2 id="buyerRequestsTitle">Buyer requests</h2><p class="helper-text">Post a project and choose the store you want to work with.</p></div><button type="button" id="newBuyerRequest" class="primary-btn">Post a request</button></div>
               <p id="requestsDirectoryStatus" class="helper-text" role="status"></p><p id="requestsStatus" class="account-status" role="status"></p><div id="requestsGrid" class="request-grid"></div>
             </section>
+          </div>
           </div>
         </section>
       </main>
@@ -1173,5 +1179,6 @@
     <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
     <script src="app.bundle.js?v=23" defer></script>
+    <script src="feed-viewer.js?v=1" defer></script>
   </body>
 </html>
