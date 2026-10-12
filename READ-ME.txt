@@ -1,0 +1,4 @@
+Replace index.html, app.bundle.js, post-likes.js and styles.css at the root of the published site.
+Paste firestore-rules.txt into Firestore Database > Rules and click Publish.
+This package uses app.bundle.js?v=26 and post-likes.js?v=3.
+Do not upload these files into an extra subfolder.

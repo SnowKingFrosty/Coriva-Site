@@ -62,7 +62,14 @@
         const status = document.createElement('span');
         status.className = 'post-like-status';
         status.setAttribute('role', 'status');
-        status.textContent = 'Like could not be saved. Please try again.';
+        const code = String(error.code || '').replace('firestore/', '');
+        status.textContent = code === 'permission-denied'
+          ? 'Likes are blocked by database permissions. The site owner needs to publish the updated Firestore rules.'
+          : code === 'unauthenticated'
+            ? 'Your sign-in has expired. Sign in again to like this post.'
+            : code === 'unavailable' || code === 'deadline-exceeded'
+              ? 'Could not connect to save your like. Check your connection and try again.'
+              : `Like could not be saved${code ? ' (' + code + ')' : ''}. Please try again.`;
         card.append(status);
         setTimeout(() => status.remove(), 4000);
       }

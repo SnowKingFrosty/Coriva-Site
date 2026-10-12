@@ -1,0 +1,480 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isConversationParticipant(conversationId) {
+      return signedIn()
+        && request.auth.uid in get(
+          /databases/$(database)/documents/chats/$(conversationId)
+        ).data.participants;
+    }
+
+    function isJobParticipant(jobId) {
+      return signedIn() && request.auth.uid in get(/databases/$(database)/documents/jobs/$(jobId)).data.participants;
+    }
+    match /jobs/{jobId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow write: if false;
+      match /messages/{messageId} {
+        allow read: if isJobParticipant(jobId);
+        allow write: if false;
+      }
+      match /documents/{documentId} {
+        allow read: if isJobParticipant(jobId);
+        allow write: if false;
+      }
+    }
+    match /notifications/{userId}/items/{notificationId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow update: if signedIn() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read is bool;
+      allow create: if ('requestId' in request.resource.data && validRequestNotification(userId, notificationId))
+        || ('kind' in request.resource.data && validLikeNotification(userId, notificationId));
+      allow delete: if false;
+    }
+    function likeNotificationUsername(userId) {
+      let profilePath = /databases/$(database)/documents/profiles/$(userId);
+      let username = exists(profilePath) ? get(profilePath).data.get('username', '') : '';
+      return username is string && username.size() > 0 ? username : 'Coriva member';
+    }
+    function validLikeNotification(recipient, notificationId) {
+      let n = request.resource.data;
+      let postPath = /databases/$(database)/documents/posts/$(n.postId);
+      let likePath = /databases/$(database)/documents/posts/$(n.postId)/likes/$(request.auth.uid);
+      let username = likeNotificationUsername(request.auth.uid);
+      return signedIn()
+        && n.keys().hasOnly(['kind','postId','likerUid','username','title','body','read','createdAt'])
+        && n.kind == 'post_like' && n.postId is string
+        && n.likerUid == request.auth.uid && recipient != request.auth.uid
+        && notificationId == 'like_' + n.postId + '_' + request.auth.uid
+        && get(postPath).data.ownerUid == recipient
+        && !exists(likePath) && existsAfter(likePath)
+        && getAfter(likePath).data.active == true
+        && getAfter(postPath).data.likes == get(postPath).data.get('likes', 0) + 1
+        && n.username == username
+        && n.title == 'Post liked' && n.body == username + ' has liked your post!'
+        && n.read == false && n.createdAt == request.time;
+    }
+    function validPostLikeUpdate(postId) {
+      let likePath = /databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid);
+      let wasActive = exists(likePath) && get(likePath).data.active == true;
+      let active = getAfter(likePath).data.active;
+      let count = resource.data.get('likes', 0);
+      return existsAfter(likePath) && active is bool && active != wasActive
+        && request.resource.data.likes is int
+        && request.resource.data.likes == (active ? count + 1 : (count > 0 ? count - 1 : 0));
+    }
+    function validPersonalLike(postId, userId) {
+      let postPath = /databases/$(database)/documents/posts/$(postId);
+      let likePath = /databases/$(database)/documents/posts/$(postId)/likes/$(userId);
+      let hadLike = exists(likePath);
+      let wasActive = hadLike && get(likePath).data.active == true;
+      let n = request.resource.data;
+      let count = get(postPath).data.get('likes', 0);
+      return signedIn() && request.auth.uid == userId && exists(postPath)
+        && n.keys().hasOnly(['active','updatedAt']) && n.active is bool
+        && n.active != wasActive && n.updatedAt == request.time
+        && getAfter(postPath).data.likes == (n.active ? count + 1 : (count > 0 ? count - 1 : 0))
+        && (hadLike || get(postPath).data.ownerUid == userId
+          || existsAfter(/databases/$(database)/documents/notifications/$(get(postPath).data.ownerUid)/items/$('like_' + postId + '_' + userId)));
+    }
+    function validRequestNotification(recipient, notificationId) {
+      let n = request.resource.data;
+      let r = get(/databases/$(database)/documents/buyerRequests/$(n.requestId)).data;
+      let after = getAfter(/databases/$(database)/documents/buyerRequests/$(n.requestId)).data;
+      let appPath = /databases/$(database)/documents/buyerRequests/$(n.requestId)/applications/$(n.storeId);
+      return signedIn()
+        && n.keys().hasOnly(['requestId','requestKind','storeId','storeName','title','body','read','createdAt'])
+        && n.requestId is string && n.storeId is string && n.storeName is string
+        && n.read == false && n.createdAt == request.time
+        && notificationId == 'request_' + n.requestId + '_' + n.requestKind + '_' + n.storeId
+        && (
+          (n.requestKind == 'apply' && r.status == 'open' && recipient == r.buyerUid
+            && !exists(appPath) && existsAfter(appPath)
+            && getAfter(appPath).data.creatorUid == request.auth.uid
+            && getAfter(appPath).data.storeName == n.storeName
+            && n.title == 'New project application' && n.body == n.storeName + ' applied to your project.')
+          || (n.requestKind == 'selected' && request.auth.uid == r.buyerUid
+            && r.status == 'open' && after.status == 'active' && recipient == after.assignedUid
+            && n.storeId == after.storeId && n.storeName == after.storeName
+            && n.title == 'Project awarded' && n.body == 'Your store ' + n.storeName + ' was selected for this project.')
+          || (n.requestKind == 'withdrawn' && request.auth.uid == r.buyerUid
+            && r.status == 'active' && after.status == 'withdrawn' && recipient == r.assignedUid
+            && n.storeId == r.storeId && n.storeName == r.storeName
+            && n.title == 'Buyer request taken down'
+            && n.body == 'The buyer took down this project request. Contact the buyer for further details.')
+          || (n.requestKind == 'completed' && request.auth.uid == r.assignedUid
+            && r.status == 'active' && after.status == 'completed' && recipient == r.buyerUid
+            && n.storeId == r.storeId && n.storeName == r.storeName
+            && n.title == 'Project complete'
+            && n.body == "Your project is done, Please contact '" + n.storeName + "' for further details.")
+        );
+    }
+    match /buyerRequests/{requestId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['buyerUid','title','description','budget','currency','status','createdAt','updatedAt'])
+        && request.resource.data.buyerUid == request.auth.uid
+        && request.resource.data.title is string && request.resource.data.title.size() >= 3 && request.resource.data.title.size() <= 100
+        && request.resource.data.description is string && request.resource.data.description.size() >= 20 && request.resource.data.description.size() <= 3000
+        && request.resource.data.budget is number && request.resource.data.budget >= 1 && request.resource.data.budget <= 10000000
+        && request.resource.data.currency in ['USD','CAD','EUR','GBP','AUD']
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && (
+        (request.auth.uid == resource.data.buyerUid
+          && resource.data.status in ['open','active','completed'] && request.resource.data.status == 'withdrawn'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','withdrawnAt','updatedAt'])
+          && request.resource.data.withdrawnAt == request.time && request.resource.data.updatedAt == request.time
+          && (resource.data.status != 'active' || existsAfter(/databases/$(database)/documents/notifications/$(resource.data.assignedUid)/items/$('request_' + requestId + '_withdrawn_' + resource.data.storeId))))
+        || (resource.data.status == 'open' && request.auth.uid == resource.data.buyerUid
+          && request.resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','assignedUid','storeId','storeName','updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)/applications/$(request.resource.data.storeId)).data.creatorUid == request.resource.data.assignedUid
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)/applications/$(request.resource.data.storeId)).data.storeName == request.resource.data.storeName
+          && existsAfter(/databases/$(database)/documents/notifications/$(request.resource.data.assignedUid)/items/$('request_' + requestId + '_selected_' + request.resource.data.storeId)))
+        || (resource.data.status == 'active' && request.auth.uid == resource.data.assignedUid
+          && request.resource.data.status == 'completed'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt','updatedAt'])
+          && request.resource.data.updatedAt == request.time && request.resource.data.completedAt == request.time
+          && existsAfter(/databases/$(database)/documents/notifications/$(resource.data.buyerUid)/items/$('request_' + requestId + '_completed_' + resource.data.storeId)))
+      );
+      allow delete: if false;
+      match /applications/{storeId} {
+        allow read: if signedIn() && (get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.buyerUid == request.auth.uid
+          || get(/databases/$(database)/documents/stores/$(storeId)).data.ownerUid == request.auth.uid);
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.status == 'open'
+          && get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.buyerUid != request.auth.uid
+          && get(/databases/$(database)/documents/stores/$(storeId)).data.ownerUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['creatorUid','storeId','storeName','createdAt'])
+          && request.resource.data.creatorUid == request.auth.uid && request.resource.data.storeId == storeId
+          && request.resource.data.storeName == get(/databases/$(database)/documents/stores/$(storeId)).data.name
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/notifications/$(get(/databases/$(database)/documents/buyerRequests/$(requestId)).data.buyerUid)/items/$('request_' + requestId + '_apply_' + storeId));
+        allow update, delete: if false;
+      }
+    }
+    match /jobRequestLimits/{userId} { allow read, write: if false; }
+    match /emailDeliveries/{deliveryId} { allow read, write: if false; }
+
+    match /profiles/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /stores/{storeId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName']);
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName']);
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /invoices/{invoiceId} {
+        allow read: if signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.storeId == storeId;
+        allow create: if signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.storeId == storeId
+          && get(/databases/$(database)/documents/stores/$(storeId)).data.ownerUid == request.auth.uid
+          && request.resource.data.invoiceNumber is string
+          && request.resource.data.invoiceNumber.size() > 0
+          && request.resource.data.invoiceNumber.size() <= 40
+          && request.resource.data.customerName is string
+          && request.resource.data.customerName.size() > 0
+          && request.resource.data.customerName.size() <= 120
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.items.size() <= 100
+          && request.resource.data.paymentMethods is list
+          && request.resource.data.paymentMethods.size() <= 10
+          && request.resource.data.taxRate is number
+          && request.resource.data.taxRate >= 0
+          && request.resource.data.taxRate <= 100
+          && (!('status' in request.resource.data) || request.resource.data.status in ['active', 'void']);
+        allow update: if signedIn()
+          && request.resource.data.get('jobId', '') == resource.data.get('jobId', '')
+          && (!('status' in resource.data) || resource.data.status != 'void')
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.storeId == storeId
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.storeId == storeId
+          && request.resource.data.invoiceNumber is string
+          && request.resource.data.invoiceNumber.size() > 0
+          && request.resource.data.invoiceNumber.size() <= 40
+          && request.resource.data.customerName is string
+          && request.resource.data.customerName.size() > 0
+          && request.resource.data.customerName.size() <= 120
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.items.size() <= 100
+          && request.resource.data.paymentMethods is list
+          && request.resource.data.paymentMethods.size() <= 10
+          && request.resource.data.taxRate is number
+          && request.resource.data.taxRate >= 0
+          && request.resource.data.taxRate <= 100
+          && (!('status' in request.resource.data) || request.resource.data.status in ['active', 'void']);
+        allow delete: if signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.storeId == storeId;
+      }
+
+
+      match /quotes/{quoteId} {
+        allow read: if signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.storeId == storeId;
+        allow create: if signedIn()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.storeId == storeId
+          && get(/databases/$(database)/documents/stores/$(storeId)).data.ownerUid == request.auth.uid
+          && request.resource.data.quoteNumber is string
+          && request.resource.data.quoteNumber.size() > 0
+          && request.resource.data.quoteNumber.size() <= 40
+          && request.resource.data.customerName is string
+          && request.resource.data.customerName.size() > 0
+          && request.resource.data.customerName.size() <= 120
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.items.size() <= 100
+          && request.resource.data.taxRate is number
+          && request.resource.data.taxRate >= 0
+          && request.resource.data.taxRate <= 100
+          && (!('status' in request.resource.data) || request.resource.data.status in ['active', 'void']);
+        allow update: if signedIn()
+          && request.resource.data.get('jobId', '') == resource.data.get('jobId', '')
+          && (!('status' in resource.data) || resource.data.status != 'void')
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.storeId == storeId
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.storeId == storeId
+          && request.resource.data.quoteNumber is string
+          && request.resource.data.quoteNumber.size() > 0
+          && request.resource.data.quoteNumber.size() <= 40
+          && request.resource.data.customerName is string
+          && request.resource.data.customerName.size() > 0
+          && request.resource.data.customerName.size() <= 120
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.items.size() <= 100
+          && request.resource.data.taxRate is number
+          && request.resource.data.taxRate >= 0
+          && request.resource.data.taxRate <= 100
+          && (!('status' in request.resource.data) || request.resource.data.status in ['active', 'void']);
+        allow delete: if signedIn()
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.storeId == storeId;
+      }
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      // Public engagement writes can only increase the view count by one.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+        && request.resource.data.views is int
+        && request.resource.data.views == resource.data.get('views', 0) + 1;
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.creatorUsername is string
+        && request.resource.data.creatorUsername.size() <= 100
+        && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName']);
+      allow update: if signedIn()
+        && (
+          (
+            resource.data.ownerUid == request.auth.uid
+            && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName'])
+          )
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+            && validPostLikeUpdate(postId)
+          )
+        );
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      match /likes/{userId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, update: if validPersonalLike(postId, userId);
+        allow delete: if false;
+      }
+    }
+
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.creatorUsername is string
+        && request.resource.data.creatorUsername.size() <= 100
+        && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 70;
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.creatorUsername is string
+        && request.resource.data.creatorUsername.size() <= 100
+        && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'banner', 'updatedAt', 'creatorName', 'creatorUsername', 'fullName'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 70
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 300;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /members/{userId} {
+        allow read: if true;
+        allow create, update: if signedIn() && request.auth.uid == userId
+          && exists(/databases/$(database)/documents/rooms/$(roomId))
+          && request.resource.data.keys().hasOnly(['uid','username','photoURL','typing','updatedAt'])
+          && request.resource.data.uid == userId
+          && request.resource.data.username is string && request.resource.data.username.size() <= 100
+          && request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048
+          && request.resource.data.typing is bool && request.resource.data.updatedAt == request.time;
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
+
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly([
+            'senderUid', 'senderUsername', 'senderPhotoURL', 'mentionUids', 'text', 'gifId', 'gifUrl', 'gifTitle', 'createdAt'
+          ])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderUsername is string
+          && request.resource.data.senderUsername.size() <= 100
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 10000
+          && request.resource.data.createdAt == request.time
+          && (!request.resource.data.keys().hasAny(['senderPhotoURL']) || (request.resource.data.senderPhotoURL is string && request.resource.data.senderPhotoURL.size() <= 2048))
+          && (!request.resource.data.keys().hasAny(['mentionUids']) || (request.resource.data.mentionUids is list && request.resource.data.mentionUids.size() <= 10))
+          && (
+            request.resource.data.text.size() > 0
+            || (
+              request.resource.data.keys().hasAny(['gifUrl'])
+              && request.resource.data.gifUrl is string
+              && (
+                request.resource.data.gifUrl.matches('https://static[.]klipy[.]com/.*')
+                || request.resource.data.gifUrl.matches('https://firebasestorage[.]googleapis[.]com/.*')
+                || request.resource.data.gifUrl.matches('https://.*[.]gif([?].*)?')
+              )
+            )
+            || (
+              request.resource.data.keys().hasAny(['gifId'])
+              && request.resource.data.gifId in [
+                '1f44b', '1f44d', '1f602', '1f389',
+                '1f525', '1f4af', '1f64c', '1f44f'
+              ]
+            )
+          )
+          && (
+            !request.resource.data.keys().hasAny(['gifUrl'])
+            || (
+              request.resource.data.gifUrl is string
+              && (
+                request.resource.data.gifUrl.matches('https://static[.]klipy[.]com/.*')
+                || request.resource.data.gifUrl.matches('https://firebasestorage[.]googleapis[.]com/.*')
+                || request.resource.data.gifUrl.matches('https://.*[.]gif([?].*)?')
+              )
+            )
+          )
+          && (
+            !request.resource.data.keys().hasAny(['gifTitle'])
+            || (
+              request.resource.data.gifTitle is string
+              && request.resource.data.gifTitle.size() <= 100
+            )
+          )
+          && (
+            !request.resource.data.keys().hasAny(['gifId'])
+            || request.resource.data.gifId in [
+              '1f44b', '1f44d', '1f602', '1f389',
+              '1f525', '1f4af', '1f64c', '1f44f'
+            ]
+          );
+        allow update: if signedIn()
+          && resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderUsername is string
+          && request.resource.data.senderUsername.size() <= 100
+          && !request.resource.data.keys().hasAny(['fullName', 'senderName', 'creatorName'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'fullName', 'senderName', 'senderUsername'
+          ]);
+        allow delete: if signedIn()
+          && (
+            resource.data.senderUid == request.auth.uid
+            || get(/databases/$(database)/documents/rooms/$(roomId)).data.ownerUid == request.auth.uid
+          );
+      }
+    }
+
+    match /chats/{conversationId} {
+      allow create: if signedIn()
+        && request.resource.data.storeId is string
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() <= 2
+        && request.auth.uid in request.resource.data.participants
+        && get(/databases/$(database)/documents/stores/$(request.resource.data.storeId)).data.ownerUid
+          in request.resource.data.participants
+        && request.resource.data.participants.hasOnly([
+          request.auth.uid,
+          get(/databases/$(database)/documents/stores/$(request.resource.data.storeId)).data.ownerUid
+        ]);
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'storeId'])
+        && request.resource.data.participants == resource.data.participants
+        && request.resource.data.storeId == resource.data.storeId;
+      allow delete: if false;
+
+      match /readStates/{userId} {
+        allow read: if isConversationParticipant(conversationId) && request.auth.uid == userId;
+        allow create, update: if isConversationParticipant(conversationId) && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['readAt']) && request.resource.data.readAt == request.time;
+        allow delete: if false;
+      }
+
+      match /messages/{messageId} {
+        allow read: if isConversationParticipant(conversationId);
+        allow create: if isConversationParticipant(conversationId)
+          && request.resource.data.keys().hasOnly(['senderUid','senderUsername','senderPhotoURL','text','createdAt','type','paymentUrl','paymentLabel','paymentQrUrl'])
+          && request.resource.data.createdAt == request.time
+          && (!request.resource.data.keys().hasAny(['senderUsername']) || (request.resource.data.senderUsername is string && request.resource.data.senderUsername.size() <= 100))
+          && (!request.resource.data.keys().hasAny(['senderPhotoURL']) || (request.resource.data.senderPhotoURL is string && request.resource.data.senderPhotoURL.size() <= 2048))
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && (!request.resource.data.keys().hasAny(['type','paymentUrl','paymentLabel','paymentQrUrl']) || (
+            request.resource.data.type == 'payment'
+            && request.resource.data.paymentUrl is string
+            && request.resource.data.paymentUrl.size() > 8 && request.resource.data.paymentUrl.size() <= 1000
+            && request.resource.data.paymentUrl.matches('https://[^ ]+')
+            && request.resource.data.paymentQrUrl is string && request.resource.data.paymentQrUrl.size() <= 2048
+            && request.resource.data.paymentQrUrl.matches('https://[^ ]+')
+            && request.resource.data.paymentLabel is string
+            && request.resource.data.paymentLabel.size() >= 1 && request.resource.data.paymentLabel.size() <= 100
+            && get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.ownerUid == request.auth.uid
+            && request.resource.data.paymentUrl == get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.paymentUrl
+            && request.resource.data.paymentLabel == get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.paymentLabel
+            && request.resource.data.paymentQrUrl == get(/databases/$(database)/documents/stores/$(get(/databases/$(database)/documents/chats/$(conversationId)).data.storeId)).data.paymentQrUrl
+          ));
+        allow update, delete: if false;
+      }
+    }
+  }
+}

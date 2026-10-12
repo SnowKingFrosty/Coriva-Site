@@ -115,7 +115,8 @@ window.corivaPosts.toggleLike = async (id, likeOnly = false) => {
     transaction.update(postRef, { likes });
     transaction.set(likeRef, { active, updatedAt: (0,v.serverTimestamp)() });
     if (active && !likeSnapshot.exists() && post.ownerUid && post.ownerUid !== user.uid) {
-      const username = profileSnapshot.data()?.username || 'Coriva member';
+      const profileUsername = profileSnapshot.data()?.username;
+      const username = typeof profileUsername === 'string' && profileUsername.length ? profileUsername : 'Coriva member';
       transaction.set((0,v.doc)(X, 'notifications', post.ownerUid, 'items', `like_${id}_${user.uid}`), {
         kind: 'post_like', postId: id, likerUid: user.uid, username,
         title: 'Post liked', body: `${username} has liked your post!`,
