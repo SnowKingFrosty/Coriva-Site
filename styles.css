@@ -3156,3 +3156,23 @@ button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b
   width: 0;
   height: 0;
 }
+
+/* Feedback for double-tap likes; gestures continue to scroll the feed. */
+.post-double-like-heart {
+  position: absolute; top: 50%; left: 50%; z-index: 3; pointer-events: none;
+  color: #ff7b88; font-size: 5rem; line-height: 1;
+  text-shadow: 0 3px 20px rgba(0,0,0,.45); animation: post-like-pop .7s ease-out forwards;
+}
+@keyframes post-like-pop {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
+  25% { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+  65% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-double-like-heart { animation: none; transform: translate(-50%,-50%); }
+}
+
+.discover-post { touch-action: manipulation; }
+
+.post-like-status { position: absolute; top: 1rem; left: 1rem; right: 1rem; z-index: 4; padding: .7rem; border-radius: 12px; color: #fff; background: rgba(10,15,26,.9); pointer-events: none; }
