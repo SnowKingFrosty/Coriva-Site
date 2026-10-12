@@ -2353,7 +2353,8 @@ button {
 
 .login-form label,
 .signup-form label,
-.store-form label {
+.store-form label,
+.storefront-bio-editor label {
   display: grid;
   gap: 0.45rem;
   color: var(--muted);
@@ -2365,7 +2366,8 @@ button {
 .signup-form select,
 .store-form input,
 .store-form select,
-.store-form textarea {
+.store-form textarea,
+.storefront-bio-editor textarea {
   width: 100%;
   padding: 0.9rem 0.95rem;
   border-radius: 12px;
@@ -2385,8 +2387,29 @@ button {
 }
 
 .store-form select,
-.store-form textarea {
+.store-form textarea,
+.storefront-bio-editor textarea {
   resize: vertical;
+}
+
+.storefront-bio-editor {
+  margin-top: 0.85rem;
+}
+
+.storefront-bio-editor textarea {
+  min-height: 8rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.storefront-bio-editor textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.storefront-bio-editor textarea:focus-visible {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(143, 125, 255, 0.15);
 }
 
 .form-grid {
@@ -3122,3 +3145,14 @@ button.storefront-post-card { display: block; width: 100%; padding: 0; text-alig
 button.storefront-post-card:hover { border-color: var(--accent, #8b9cff); }
 button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b9cff); outline-offset: 3px; }
 .storefront-post-stats { color: var(--muted); font-size: .8rem; font-weight: 600; }
+
+/* Hide the FYP scrollbar while retaining wheel, keyboard and touch scrolling. */
+#discoverFeed {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#discoverFeed::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
