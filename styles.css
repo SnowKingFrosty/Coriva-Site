@@ -605,7 +605,11 @@ button {
   height: 100%;
 }
 
-.discover-post-media > img,
+.discover-post-media > img {
+  object-fit: contain;
+  object-position: center;
+}
+
 .discover-post-media > video {
   object-fit: cover;
 }
