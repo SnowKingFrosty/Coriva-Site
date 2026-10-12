@@ -22,6 +22,7 @@ import {
   onAuthStateChanged,
   onSnapshot,
   query,
+  runTransaction,
   reauthenticateWithCredential,
   serverTimestamp,
   setDoc,
@@ -1780,13 +1781,18 @@ const renderStorefrontPage = (store) => {
     ));
   } else {
     posts.forEach((post) => {
-      const card = createElement('article', 'storefront-post-card');
+      const card = createElement('button', 'storefront-post-card');
+      card.type = 'button';
+      card.dataset.openPostId = post.id;
+      card.setAttribute('aria-label', 'View post on For you');
+      card.addEventListener('click', () => window.corivaPosts.openPost(post.id));
       const media = post.mediaType?.startsWith('video/')
         ? createElement('video', 'storefront-post-media')
         : createElement('img', 'storefront-post-media');
       media.src = post.mediaData;
       if (media.tagName === 'VIDEO') {
-        media.controls = true;
+        media.controls = false;
+        media.muted = true;
         media.playsInline = true;
       } else {
         media.alt = `${store.name} project`;
@@ -1794,7 +1800,7 @@ const renderStorefrontPage = (store) => {
       }
       const copy = createElement('div', 'storefront-post-copy');
       copy.append(createElement('span', 'post-type-label', post.type === 'ad' ? 'Sponsored' : 'Creator post'));
-      copy.append(createElement('p', '', post.caption || 'Project from the creator'));
+      copy.append(createElement('p', 'storefront-post-stats', `${Math.max(0, Number(post.likes) || 0).toLocaleString()} likes · ${Math.max(0, Number(post.views) || 0).toLocaleString()} views`));
       card.append(media, copy);
       storefrontPosts.append(card);
     });
@@ -3683,3 +3689,32 @@ storyPills.forEach((pill) => {
 
 window.corivaReady = true;
 window.dispatchEvent(new Event("coriva-ready"));
+
+// Shared post navigation and engagement used by the storefront and FYP UI.
+window.corivaPosts = {
+  openPost(id) {
+    if (!discoverPosts.some(post => post.id === id)) return;
+    document.getElementById('closeStoreTemplate').click();
+    document.getElementById('discoverSearchInput').value = '';
+    document.getElementById('clearDiscoverSearch').click();
+    document.querySelector('[data-feed-filter="all"]').click();
+    location.hash = 'feed';
+    requestAnimationFrame(() => {
+      const card = [...discoverFeed.children].find(item => item.dataset.postId === id);
+      if (!card) return;
+      discoverFeed.scrollTop += card.getBoundingClientRect().top - discoverFeed.getBoundingClientRect().top;
+      card.tabIndex = -1;
+      card.focus({ preventScroll: true });
+    });
+  },
+  async recordView(id) {
+    const target = doc(db, 'posts', id);
+    return runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(target);
+      if (!snapshot.exists()) return false;
+      const views = Math.max(0, Number(snapshot.data().views) || 0);
+      transaction.update(target, { views: views + 1 });
+      return true;
+    });
+  }
+};

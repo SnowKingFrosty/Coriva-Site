@@ -3116,3 +3116,9 @@ button:focus-visible { outline:2px solid #67d5ff; outline-offset:3px; }
 .post-caption-toggle { background: rgba(8,12,20,.7); color: #fff; font-weight: 700; font-size: .85rem; padding: .4rem .65rem; border-radius: .4rem; min-height: 36px; }
 .post-caption-toggle:focus-visible, #feedFullscreenButton:focus-visible, .discover-post-caption.is-expanded:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { #discoverFeed { scroll-behavior: auto; } }
+
+/* Storefront posts link to their FYP post and show engagement totals. */
+button.storefront-post-card { display: block; width: 100%; padding: 0; text-align: left; color: var(--text); cursor: pointer; }
+button.storefront-post-card:hover { border-color: var(--accent, #8b9cff); }
+button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b9cff); outline-offset: 3px; }
+.storefront-post-stats { color: var(--muted); font-size: .8rem; font-weight: 600; }
