@@ -15,3 +15,26 @@ once per post per browser session. Earlier views were not tracked, so old posts
 start at zero unless they already have a saved `views` count.
 
 The full screen feed, expandable captions and full-image sizing are included.
+
+## Likes and notifications
+
+Upload the new `post-likes.js` along with the updated `app.bundle.js` and `index.html`.
+Publish the updated Firestore rules before using this feature.
+
+Each signed-in user has their own like state. A first like sends the post owner
+“Username has liked your post!” in Notifications. Open on that notification
+returns to the post on the FYP. Self-likes do not send alerts, and unliking or
+liking the same post again does not create duplicate notifications.
+
+Double-tap a post to like it (desktop users can double-click). An already-liked
+post stays liked. Caption controls and shop buttons retain their own actions,
+and swipe gestures still scroll posts.
+
+## Double-tap fix
+
+The mobile gesture handler now supports native touch events and a pointer-event
+fallback, tolerates feed refreshes between taps, and keeps swipe scrolling.
+A successful double-tap like gives a short vibration where the browser supports
+it. Upload the updated `post-likes.js`, `index.html`, and `styles.css`.
+The same previously supplied Firestore rules are still required; no new rule
+changes are needed for this gesture fix.

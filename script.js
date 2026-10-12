@@ -2295,15 +2295,10 @@ discoverFeed.addEventListener('click', (event) => {
   if (!post) return;
   if (!requireAuth('signin')) return;
 
-  post.liked = !post.liked;
-  post.likes = Math.max(0, (post.likes || 0) + (post.liked ? 1 : -1));
-  likeButton.classList.toggle('is-liked', post.liked);
-  likeButton.setAttribute('aria-pressed', String(post.liked));
-  likeButton.setAttribute('aria-label', post.liked ? 'Unlike post' : 'Like post');
-  likeButton.querySelector('.post-like-icon').textContent = post.liked ? '♥' : '♡';
-  likeButton.querySelector('.post-like-count').textContent = String(post.likes);
-  updateDoc(doc(db, 'posts', post.id), { liked: post.liked, likes: post.likes }).catch(showCloudError);
-  saveDiscoverPosts();
+  if (likeButton.disabled) return;
+  likeButton.disabled = true;
+  window.corivaPosts.toggleLike(post.id).catch(showCloudError)
+    .finally(() => { likeButton.disabled = false; });
 });
 
 let postWheelScrollLocked = false;
@@ -3698,6 +3693,8 @@ window.corivaPosts = {
     document.getElementById('discoverSearchInput').value = '';
     document.getElementById('clearDiscoverSearch').click();
     document.querySelector('[data-feed-filter="all"]').click();
+    document.getElementById('notificationsPage').classList.add('hidden');
+    document.querySelector('.page-shell').classList.remove('hidden');
     location.hash = 'feed';
     requestAnimationFrame(() => {
       const card = [...discoverFeed.children].find(item => item.dataset.postId === id);
@@ -3717,4 +3714,49 @@ window.corivaPosts = {
       return true;
     });
   }
+};
+// Per-user likes and creator notifications are saved together.
+window.corivaPosts.watchLike = (id, callback) => {
+  let stopLike;
+  const stopAuth = onAuthStateChanged(auth, user => {
+    stopLike?.();
+    callback(false);
+    if (user) stopLike = onSnapshot(doc(db, 'posts', id, 'likes', user.uid),
+      snapshot => callback(snapshot.exists() && snapshot.data().active === true),
+      () => callback(false));
+  });
+  return () => { stopAuth(); stopLike?.(); };
+};
+window.corivaPosts.toggleLike = async (id, likeOnly = false) => {
+  const user = auth.currentUser;
+  if (!user) return;
+  const postRef = doc(db, 'posts', id);
+  const likeRef = doc(db, 'posts', id, 'likes', user.uid);
+  return runTransaction(db, async transaction => {
+    const [postSnapshot, likeSnapshot, profileSnapshot] = await Promise.all([
+      transaction.get(postRef), transaction.get(likeRef), transaction.get(doc(db, 'profiles', user.uid))
+    ]);
+    if (!postSnapshot.exists()) throw new Error('This post is no longer available.');
+    const post = postSnapshot.data();
+    const alreadyLiked = likeSnapshot.exists() && likeSnapshot.data().active === true;
+    if (likeOnly && alreadyLiked) return { active: true, likes: post.likes || 0 };
+    const active = !alreadyLiked;
+    const likes = Math.max(0, Math.floor(Number(post.likes) || 0) + (active ? 1 : -1));
+    transaction.update(postRef, { likes });
+    transaction.set(likeRef, { active, updatedAt: serverTimestamp() });
+    if (active && !likeSnapshot.exists() && post.ownerUid && post.ownerUid !== user.uid) {
+      const username = profileSnapshot.data()?.username || 'Coriva member';
+      transaction.set(doc(db, 'notifications', post.ownerUid, 'items', `like_${id}_${user.uid}`), {
+        kind: 'post_like', postId: id, likerUid: user.uid, username,
+        title: 'Post liked', body: `${username} has liked your post!`,
+        read: false, createdAt: serverTimestamp()
+      });
+    }
+    return { active, likes };
+  });
+};
+
+window.corivaPosts.likePost = id => {
+  if (!requireAuth('signin')) return Promise.resolve(null);
+  return window.corivaPosts.toggleLike(id, true);
 };

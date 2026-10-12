@@ -33,8 +33,51 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
         && request.resource.data.read is bool;
-      allow create: if validRequestNotification(userId, notificationId);
+      allow create: if ('requestId' in request.resource.data && validRequestNotification(userId, notificationId))
+        || ('kind' in request.resource.data && validLikeNotification(userId, notificationId));
       allow delete: if false;
+    }
+    function validLikeNotification(recipient, notificationId) {
+      let n = request.resource.data;
+      let postPath = /databases/$(database)/documents/posts/$(n.postId);
+      let likePath = /databases/$(database)/documents/posts/$(n.postId)/likes/$(request.auth.uid);
+      let profile = get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+      let username = profile.get('username', '') == '' ? 'Coriva member' : profile.username;
+      return signedIn()
+        && n.keys().hasOnly(['kind','postId','likerUid','username','title','body','read','createdAt'])
+        && n.kind == 'post_like' && n.postId is string
+        && n.likerUid == request.auth.uid && recipient != request.auth.uid
+        && notificationId == 'like_' + n.postId + '_' + request.auth.uid
+        && get(postPath).data.ownerUid == recipient
+        && !exists(likePath) && existsAfter(likePath)
+        && getAfter(likePath).data.active == true
+        && getAfter(postPath).data.likes == get(postPath).data.get('likes', 0) + 1
+        && n.username == username
+        && n.title == 'Post liked' && n.body == username + ' has liked your post!'
+        && n.read == false && n.createdAt == request.time;
+    }
+    function validPostLikeUpdate(postId) {
+      let likePath = /databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid);
+      let wasActive = exists(likePath) && get(likePath).data.active == true;
+      let active = getAfter(likePath).data.active;
+      let count = resource.data.get('likes', 0);
+      return existsAfter(likePath) && active is bool && active != wasActive
+        && request.resource.data.likes is int
+        && request.resource.data.likes == (active ? count + 1 : (count > 0 ? count - 1 : 0));
+    }
+    function validPersonalLike(postId, userId) {
+      let postPath = /databases/$(database)/documents/posts/$(postId);
+      let likePath = /databases/$(database)/documents/posts/$(postId)/likes/$(userId);
+      let hadLike = exists(likePath);
+      let wasActive = hadLike && get(likePath).data.active == true;
+      let n = request.resource.data;
+      let count = get(postPath).data.get('likes', 0);
+      return signedIn() && request.auth.uid == userId && exists(postPath)
+        && n.keys().hasOnly(['active','updatedAt']) && n.active is bool
+        && n.active != wasActive && n.updatedAt == request.time
+        && getAfter(postPath).data.likes == (n.active ? count + 1 : (count > 0 ? count - 1 : 0))
+        && (hadLike || get(postPath).data.ownerUid == userId
+          || existsAfter(/databases/$(database)/documents/notifications/$(get(postPath).data.ownerUid)/items/$('like_' + postId + '_' + userId)));
     }
     function validRequestNotification(recipient, notificationId) {
       let n = request.resource.data;
@@ -249,16 +292,16 @@ service cloud.firestore {
             && !request.resource.data.keys().hasAny(['fullName', 'creatorName', 'senderName'])
           )
           || (
-            resource.data.ownerUid != request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['liked', 'likes'])
-            && request.resource.data.liked is bool
-            && request.resource.data.likes is int
-            && request.resource.data.likes >= 0
-            && request.resource.data.likes <= resource.data.likes + 1
-            && request.resource.data.likes >= resource.data.likes - 1
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+            && validPostLikeUpdate(postId)
           )
         );
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      match /likes/{userId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, update: if validPersonalLike(postId, userId);
+        allow delete: if false;
+      }
     }
 
     match /rooms/{roomId} {
