@@ -3204,3 +3204,15 @@ button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b
 @media(max-width:800px){.public-profile-store-grid{grid-template-columns:1fr}.public-profile-store-card .store-directory-art{width:32%;flex-basis:32%}}
 @media(max-width:700px){.public-profile-cover{min-height:200px;padding:1.2rem}.public-profile-details{padding:1.1rem}.public-profile-avatar{width:56px;height:56px;flex-basis:56px;border-radius:15px}.public-profile-identity{gap:.85rem}.public-profile-share{grid-template-columns:1fr;gap:1rem}.public-profile-store-section{padding:1.1rem}.public-profile-section-heading{align-items:flex-start}.public-profile-section-heading>.secondary-btn{width:auto}.public-profile-details>.public-profile-actions{justify-content:flex-start}}
 @media(max-width:430px){.public-profile-page{width:calc(100% - 1rem)}.public-profile-store-card .store-directory-art{width:96px;flex-basis:96px;min-height:155px}.public-profile-store-card .store-directory-copy{padding:.9rem}.public-profile-store-card{min-height:155px}.public-profile-identity h1{font-size:1.4rem}.public-profile-section-heading p{font-size:.8rem}}
+
+/* Static Coriva branding on secondary pages only. */
+.subpage-brand.brand-mark.coriva-brand{width:44px;height:44px;flex:0 0 44px;animation:none;transform:none}
+.subpage-brand .coriva-logo{animation:none;transform:none}
+.branded-subpage-nav{justify-content:flex-start;flex-wrap:wrap}
+.branded-subpage-nav .subpage-brand{margin-right:.25rem}
+.branded-subpage-nav .storefront-nav-actions,.branded-subpage-nav #manageRoomButton{margin-left:auto}
+.public-profile-nav.branded-subpage-nav{justify-content:space-between}
+.subpage-title-group{display:flex;align-items:center;gap:.9rem;min-width:0;margin-right:auto}
+.subpage-title-group h1{margin:0;overflow-wrap:anywhere}
+.branded-subpage-topbar{flex-wrap:wrap}
+@media(max-width:600px){.subpage-brand.brand-mark.coriva-brand{width:36px;height:36px;flex-basis:36px}.subpage-title-group{flex:1 1 100%;gap:.75rem}.subpage-title-group h1{font-size:1.3rem}.branded-subpage-nav .storefront-nav-actions{flex-wrap:wrap;gap:.5rem}.public-profile-nav.branded-subpage-nav>button{width:auto;max-width:calc(100% - 52px)}}

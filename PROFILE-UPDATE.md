@@ -18,6 +18,10 @@ Links use your account ID, so changing your username does not break them.
 
 The rules change is required for profile saves and public links. Private account documents remain owner-only. Public profiles include username, profile images, bio, role/focus, account type, and social links; they exclude email, full name, country, and billing preferences.
 
-Profile banner uploads use the existing ImageKit upload service. QR codes are generated in the browser using the included QRCode.js dependency and do not send profile links to an external QR service.
+Profile banner uploads use the existing ImageKit upload service. Profile QR generation is embedded in `app.bundle.js`; it does not require loading a separate QR script. Public profile update failures are displayed separately and no longer prevent QR generation. QR codes are generated in the browser using QRCode.js and do not send profile links to an external QR service.
 
 Rebuild after editing JavaScript with `npm ci` followed by `npm run build`.
+
+## Branded QR codes
+
+All Coriva-generated profile and invoice payment QR codes use the same embedded generator, with the Coriva logo centered on a small badge. High error correction, a white margin, and crisp full-resolution exports preserve scanning. Profile, payment, and long checkout links were decoded successfully during validation.

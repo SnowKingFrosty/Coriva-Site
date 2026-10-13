@@ -1,3 +1,4 @@
+import { generateCorivaQR } from './profile-qr.js';
 import { initProfilePage } from './profile-page.js';
 import { initRoomSearch, matchesRoomQuery, parseSearchQuery } from './room-search.js';
 import { createRoomTools, renderChatContent, createAvatar, avatarURL } from './room-chat.js';
@@ -1508,9 +1509,6 @@ const downloadSavedDocument = async (record, kind, button) => {
 
 const downloadInvoicePdf = async (invoice, { storeOverride = null, statusTarget = invoiceStatus } = {}) => {
   await loadExternalScript('./vendor/jspdf.umd.min.js', () => Boolean(window.jspdf?.jsPDF));
-  if (invoice.status !== 'void' && invoice.paymentMethods?.length) {
-    await loadExternalScript('./vendor/qrcode.min.js', () => Boolean(window.QRCode));
-  }
   const jsPDF = window.jspdf?.jsPDF;
   if (!jsPDF) throw new Error('PDF tools are unavailable.');
   const store = storeOverride || stores.find((item) => item.id === (invoice.storeId || activeStorefrontId));
@@ -1590,13 +1588,8 @@ const downloadInvoicePdf = async (invoice, { storeOverride = null, statusTarget 
       pdf.setFontSize(7);
       pdf.setTextColor(...muted);
       pdf.textWithLink(method.url, margin, y + 33, { url: method.url });
-      const qrHolder = document.createElement('div');
-      new QRCode(qrHolder, { text: method.url, width: 72, height: 72, correctLevel: QRCode.CorrectLevel.M });
-      const qrCanvas = qrHolder.querySelector('canvas') || qrHolder.querySelector('img');
-      if (qrCanvas) {
-        const data = qrCanvas.tagName === 'CANVAS' ? qrCanvas.toDataURL('image/png') : qrCanvas.src;
-        pdf.addImage(data, 'PNG', pageWidth - margin - 72, y, 72, 72);
-      }
+      const qrData = await generateCorivaQR(method.url);
+      pdf.addImage(qrData, 'PNG', pageWidth - margin - 72, y, 72, 72);
       y += 90;
     }
   }
@@ -3706,7 +3699,6 @@ profilePageController = initProfilePage({
   createStore: () => document.getElementById('newStoreButton').click(),
   subscribe: (uid, onValue, onError) => onSnapshot(doc(db, 'publicProfiles', uid), snapshot => onValue(snapshot.exists() ? snapshot.data() : null), onError),
   publish: publishPublicProfile,
-  loadQR: () => loadExternalScript('./vendor/qrcode.min.js', () => Boolean(window.QRCode)),
   uploadBanner: async (file, uid) => {
     if (!validImageFile(file)) throw new Error('Choose an image up to 20 MB.');
     return uploadDataUrl('users/' + uid + '/profile/banner', await readImageFile(file));

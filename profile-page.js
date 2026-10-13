@@ -1,3 +1,4 @@
+import { generateProfileQR } from './profile-qr.js';
 // Public profile pages contain only explicitly public presentation fields.
 export function initProfilePage(api) {
   const el = id => document.getElementById(id);
@@ -143,24 +144,21 @@ export function initProfilePage(api) {
     el('publicProfileQR').replaceChildren(); el('publicProfileQRDownload').classList.add('hidden');
     el('publicProfileShareStatus').textContent = 'Generating QR code…';
     try {
-      if (owner()) await api.publish();
-      await api.loadQR();
       if (revision !== shareRevision) return;
-      const holder = el('publicProfileQR');
-      new window.QRCode(holder, {text: url, width: 224, height: 224, correctLevel: window.QRCode.CorrectLevel.M});
-      const canvas = holder.querySelector('canvas');
       const download = el('publicProfileQRDownload');
-      if (!canvas) throw new Error('QR image could not be generated. Please try again.');
-      const exportCanvas = document.createElement('canvas');
-      const margin = 24;
-      exportCanvas.width = canvas.width + margin * 2;
-      exportCanvas.height = canvas.height + margin * 2;
-      const context = exportCanvas.getContext('2d');
-      context.fillStyle = '#ffffff'; context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-      context.drawImage(canvas, margin, margin);
-      download.href = exportCanvas.toDataURL('image/png');
+      const data = await generateProfileQR(el('publicProfileQR'), url);
+      if (revision !== shareRevision) return;
+      download.href = data;
       download.classList.remove('hidden');
       el('publicProfileShareStatus').textContent = 'Scan to open this Coriva profile.';
+      // Cloud permissions or connection errors must not prevent QR creation.
+      if (owner()) {
+        try { await api.publish(); }
+        catch (error) {
+          if (revision === shareRevision) el('publicProfileShareStatus').textContent = 'QR code ready. Your public profile could not be updated: ' + error.message;
+        }
+      }
+
     } catch (error) { if (revision === shareRevision) el('publicProfileShareStatus').textContent = 'Unable to prepare sharing: ' + error.message; }
   });
   el('publicProfileCopy').addEventListener('click', async () => {
