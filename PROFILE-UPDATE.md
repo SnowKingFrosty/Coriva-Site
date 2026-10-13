@@ -4,7 +4,11 @@ Click your profile picture, name, or **View profile** on the main page to open y
 
 Your profile includes your username, picture, social links, specialty, an optional bio and banner, and all of your storefronts. Storefront cards open their normal storefront pages. Visitors see your public storefronts; drafts are shown only to you.
 
-Use **Customize profile** to upload or remove a banner and edit your bio. **Edit photo & social links** opens the existing account editor. Use **Share profile** to copy a permanent link or download a Coriva-generated QR code as a PNG. Links use your account ID, so changing your username does not break them.
+Use **Customize profile** to upload or remove a banner and edit your bio. **Edit photo & social links** opens the existing account editor. Use **Share profile** to copy a permanent link or download a Coriva-generated QR code as a PNG. The profile link is kept hidden and **Copy link** copies it directly. Downloaded QR codes include a white border for reliable scanning.
+
+The profile header uses a smaller picture inside the banner, and storefronts appear as compact cards with a dedicated link.
+
+Links use your account ID, so changing your username does not break them.
 
 ## Apply this update
 

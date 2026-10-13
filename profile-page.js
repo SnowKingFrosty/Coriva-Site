@@ -45,7 +45,7 @@ export function initProfilePage(api) {
     el('publicProfileStoreCount').textContent = String(stores.length);
     const grid = el('publicProfileStores'); grid.replaceChildren();
     for (const [index, store] of stores.entries()) {
-      const card = node('button', 'store-directory-card'); card.type = 'button';
+      const card = node('button', 'store-directory-card public-profile-store-card'); card.type = 'button';
       card.setAttribute('aria-label', 'View ' + store.name + ' storefront');
       const art = node('span', 'store-directory-art art-' + (index % 4 + 1));
       if (store.banner) art.append(picture(store.banner, '', 'store-directory-banner'));
@@ -56,6 +56,7 @@ export function initProfilePage(api) {
       const copy = node('span', 'store-directory-copy');
       copy.append(node('strong', '', store.name || 'Storefront'), node('span', 'store-handle', store.handle),
         node('span', 'store-category-badge', store.draft ? 'Draft' : store.category || 'Creator'));
+      copy.append(node('span', 'public-profile-store-link', 'View storefront →'));
       card.append(art, copy); card.addEventListener('click', () => api.openStore(store));
       grid.append(card);
     }
@@ -149,14 +150,36 @@ export function initProfilePage(api) {
       new window.QRCode(holder, {text: url, width: 224, height: 224, correctLevel: window.QRCode.CorrectLevel.M});
       const canvas = holder.querySelector('canvas');
       const download = el('publicProfileQRDownload');
-      download.href = canvas ? canvas.toDataURL('image/png') : holder.querySelector('img').src;
+      if (!canvas) throw new Error('QR image could not be generated. Please try again.');
+      const exportCanvas = document.createElement('canvas');
+      const margin = 24;
+      exportCanvas.width = canvas.width + margin * 2;
+      exportCanvas.height = canvas.height + margin * 2;
+      const context = exportCanvas.getContext('2d');
+      context.fillStyle = '#ffffff'; context.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      context.drawImage(canvas, margin, margin);
+      download.href = exportCanvas.toDataURL('image/png');
       download.classList.remove('hidden');
       el('publicProfileShareStatus').textContent = 'Scan to open this Coriva profile.';
     } catch (error) { if (revision === shareRevision) el('publicProfileShareStatus').textContent = 'Unable to prepare sharing: ' + error.message; }
   });
   el('publicProfileCopy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(el('publicProfileURL').value); el('publicProfileShareStatus').textContent = 'Profile link copied.'; }
-    catch { el('publicProfileURL').select(); el('publicProfileShareStatus').textContent = 'Select and copy the profile link above.'; }
+    const url = profileURL();
+    try {
+      try { await navigator.clipboard.writeText(url); }
+      catch {
+        const field = document.createElement('textarea');
+        field.value = url; field.setAttribute('readonly', '');
+        field.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+        const previousFocus = document.activeElement;
+        document.body.append(field); field.select();
+        let copied = false;
+        try { copied = document.execCommand('copy'); }
+        finally { field.remove(); previousFocus?.focus(); }
+        if (!copied) throw new Error('Clipboard unavailable');
+      }
+      el('publicProfileShareStatus').textContent = 'Profile link copied.';
+    } catch { el('publicProfileShareStatus').textContent = 'Unable to copy. Please allow clipboard access and try again.'; }
   });
   const trigger = el('profileOpenButton');
   trigger.addEventListener('click', () => open(api.user()?.uid));
