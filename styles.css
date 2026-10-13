@@ -3176,3 +3176,26 @@ button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b
 .discover-post { touch-action: manipulation; }
 
 .post-like-status { position: absolute; top: 1rem; left: 1rem; right: 1rem; z-index: 4; padding: .7rem; border-radius: 12px; color: #fff; background: rgba(10,15,26,.9); pointer-events: none; }
+
+/* Coriva public profile */
+.public-profile-page{width:min(1100px,calc(100% - 2rem));margin:1.5rem auto 4rem}
+.public-profile-nav,.public-profile-actions,.public-profile-section-heading{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.public-profile-nav{margin-bottom:1.25rem}.public-profile-nav>strong{font-size:1.3rem;color:var(--purple)}
+.public-profile-hero{overflow:hidden;padding:0}.public-profile-cover{height:260px;background:linear-gradient(120deg,#312b60,#17485a)}
+.public-profile-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.public-profile-details{padding:0 2rem 2rem}.public-profile-identity{display:flex;align-items:center;gap:1.4rem;position:relative;margin-top:-42px}
+.public-profile-avatar{width:112px;height:112px;flex:0 0 112px;border:5px solid var(--bg-soft);border-radius:50%;background:var(--panel-strong);overflow:hidden;font-size:2.5rem}
+.public-profile-avatar img{width:100%;height:100%;object-fit:cover}.public-profile-identity>div:last-child{padding-top:52px;min-width:0}
+.public-profile-identity h1{font-size:clamp(1.6rem,4vw,2.2rem);margin:0;overflow-wrap:anywhere}.public-profile-identity p{margin:.4rem 0 .8rem}
+.public-profile-details>.public-profile-actions{justify-content:flex-end;margin:1rem 0}.public-profile-bio{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;max-width:750px}
+.public-profile-editor{border-top:1px solid var(--line);padding-top:1.5rem;margin-top:1.5rem}.public-profile-actions{justify-content:flex-start}
+.public-profile-share{display:grid;grid-template-columns:minmax(0,1fr) 248px;gap:2rem;border-top:1px solid var(--line);padding-top:1.5rem;margin-top:1.5rem}
+.public-profile-share h2{margin-top:0}.public-profile-share input{width:100%;background:var(--bg-soft);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:.85rem;margin:.6rem 0 1rem}
+#publicProfileQR{background:white;padding:12px;border-radius:12px;width:248px;height:248px}#publicProfileQR img,#publicProfileQR canvas{max-width:100%}
+.public-profile-store-section{margin-top:1.5rem;padding:1.5rem}.public-profile-section-heading h2{margin:0 0 1rem}.public-profile-section-heading h2 span{font-size:.9rem;color:var(--muted);margin-left:.5rem}
+.public-profile-store-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.public-profile-store-grid .empty-state{grid-column:1/-1}
+#profileAvatar[role=button],#profileName[role=button],#profileHandle[role=button]{cursor:pointer}
+.public-profile-page button:focus-visible,.public-profile-page a:focus-visible,[role=button]:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
+@media(max-width:700px){.public-profile-cover{height:180px}.public-profile-details{padding:0 1.1rem 1.5rem}.public-profile-identity{gap:1rem}.public-profile-avatar{width:88px;height:88px;flex-basis:88px}.public-profile-identity>div:last-child{padding-top:50px}.public-profile-share{grid-template-columns:1fr;gap:1rem}.public-profile-store-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.public-profile-page{width:calc(100% - 1rem)}.public-profile-store-grid{grid-template-columns:1fr}.public-profile-details>.public-profile-actions{justify-content:flex-start}}
+.public-profile-avatar{display:flex;align-items:center;justify-content:center;color:var(--text)}

@@ -1,3 +1,4 @@
+import { initProfilePage } from './profile-page.js';
 import { initRoomSearch, matchesRoomQuery, parseSearchQuery } from './room-search.js';
 import { createRoomTools, renderChatContent, createAvatar, avatarURL } from './room-chat.js';
 import { uploadMediaBlob } from './imagekit-media.js';
@@ -158,6 +159,7 @@ const storeChatThread = document.getElementById('storeChatThread');
 const chatStoreContext = document.getElementById('chatStoreContext');
 
 const storesStorageKey = 'aethelStores';
+let profilePageController = null;
 const profileStorageKey = 'aethelProfile';
 const postsStorageKey = 'aethelDiscoverPosts';
 const cloudStatus = document.getElementById('cloudStatus');
@@ -396,6 +398,7 @@ const addSocialLinkInput = (value = '', container = profileSocialLinkFields) => 
 };
 
 const renderProfileArea = () => {
+  profilePageController?.refresh();
   const name = currentProfile?.fullName?.trim() || 'Your profile';
   const initials = name === 'Your profile' ? '?' : name.charAt(0).toUpperCase();
   profileName.textContent = name;
@@ -540,14 +543,24 @@ const saveStores = (items = stores) => {
   return savePromise;
 };
 
+const publicProfileData = (profile, uid) => ({
+  uid, username: profile?.username || '', accountType: profile?.accountType || 'creator',
+  role: profile?.role || '', focus: profile?.focus || '', bio: profile?.bio || '',
+  profilePicture: profile?.profilePicture || '', profileBanner: profile?.profileBanner || '',
+  socialLinks: getProfileSocialUrls(profile), updatedAt: serverTimestamp()
+});
+const publishPublicProfile = () => {
+  const user = auth.currentUser;
+  if (!user || !currentProfile) return Promise.reject(new Error('Sign in to share your profile.'));
+  return setDoc(doc(db, 'publicProfiles', user.uid), publicProfileData(currentProfile, user.uid));
+};
 const saveProfile = () => {
   const user = auth.currentUser;
   if (!user || !currentProfile) return Promise.reject(new Error('Sign in to save your profile.'));
-  return setDoc(doc(db, 'profiles', user.uid), {
-    ...currentProfile,
-    uid: user.uid,
-    updatedAt: serverTimestamp()
-  });
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'profiles', user.uid), { ...currentProfile, uid: user.uid, updatedAt: serverTimestamp() });
+  batch.set(doc(db, 'publicProfiles', user.uid), publicProfileData(currentProfile, user.uid));
+  return batch.commit();
 };
 
 const saveDiscoverPosts = () => {
@@ -739,6 +752,7 @@ const openRoomPage = (room, messageId = null) => {
 };
 
 const renderStores = () => {
+  profilePageController?.refresh();
   storeList.replaceChildren();
   renderPostStoreOptions();
 
@@ -3321,7 +3335,7 @@ document.getElementById('profilePictureInput').addEventListener('change', () => 
     path: 'users/' + user.uid + '/profile/avatar',
     status: document.getElementById('accountSaveStatus'),
     saveButton: accountForm.querySelector('button[type="submit"]'),
-    commit: url => setDoc(doc(db, 'profiles', user.uid), { profilePicture: url, updatedAt: serverTimestamp() }, { merge: true }),
+    commit: url => { const batch = writeBatch(db); batch.set(doc(db, 'profiles', user.uid), { profilePicture: url, updatedAt: serverTimestamp() }, { merge: true }); batch.set(doc(db, 'publicProfiles', user.uid), publicProfileData({ ...currentProfile, profilePicture: url }, user.uid)); return batch.commit(); },
     apply: url => { if (auth.currentUser?.uid === user.uid) { currentProfile = { ...currentProfile, profilePicture: url }; renderProfileArea(); } }
   });
 });
@@ -3631,7 +3645,7 @@ onAuthStateChanged(auth, async (user) => {
     roomTools.close();
     setLoggedOut();
     if (activeRoomId) renderRoomMessages();
-    if (!readStoredValue('aethelWelcomeSeen', false) && !new URL(window.location.href).searchParams.has('store')) openModal(firstVisitWelcome);
+    if (!readStoredValue('aethelWelcomeSeen', false) && !new URL(window.location.href).searchParams.has('store') && !new URL(window.location.href).searchParams.has('profile')) openModal(firstVisitWelcome);
     return;
   }
   try {
@@ -3650,6 +3664,7 @@ onAuthStateChanged(auth, async (user) => {
           profilePicture: ''
         };
     if (!profileSnapshot.exists()) await saveProfile();
+    else publishPublicProfile().catch(showCloudError);
     setAuthenticated(currentProfile);
     migrateLegacyPublicNames(user.uid, currentProfile.username).catch(showCloudError);
     closeModal(firstVisitWelcome);
@@ -3680,6 +3695,31 @@ storyPills.forEach((pill) => {
     storyPills.forEach((item) => item.classList.remove('active'));
     pill.classList.add('active');
   });
+});
+
+profilePageController = initProfilePage({
+  user: () => auth.currentUser, profile: () => currentProfile, stores: () => stores,
+  socialUrls: getProfileSocialUrls, socialAnchor: createSocialAnchor,
+  openStore: openStoreTemplate, editAccount: openAccountSettings,
+  signIn: () => { setAuthMode('signin'); openModal(loginModal); },
+  closeWelcome: () => closeModal(firstVisitWelcome),
+  createStore: () => document.getElementById('newStoreButton').click(),
+  subscribe: (uid, onValue, onError) => onSnapshot(doc(db, 'publicProfiles', uid), snapshot => onValue(snapshot.exists() ? snapshot.data() : null), onError),
+  publish: publishPublicProfile,
+  loadQR: () => loadExternalScript('./vendor/qrcode.min.js', () => Boolean(window.QRCode)),
+  uploadBanner: async (file, uid) => {
+    if (!validImageFile(file)) throw new Error('Choose an image up to 20 MB.');
+    return uploadDataUrl('users/' + uid + '/profile/banner', await readImageFile(file));
+  },
+  save: async changes => {
+    const updated = { ...currentProfile, ...changes }, user = auth.currentUser;
+    if (!user) throw new Error('Sign in to edit your profile.');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'profiles', user.uid), { ...updated, updatedAt: serverTimestamp() });
+    batch.set(doc(db, 'publicProfiles', user.uid), publicProfileData(updated, user.uid));
+    await batch.commit();
+    if (auth.currentUser?.uid === user.uid) { currentProfile = updated; renderProfileArea(); }
+  }
 });
 
 window.corivaReady = true;
@@ -3745,7 +3785,8 @@ window.corivaPosts.toggleLike = async (id, likeOnly = false) => {
     transaction.update(postRef, { likes });
     transaction.set(likeRef, { active, updatedAt: serverTimestamp() });
     if (active && !likeSnapshot.exists() && post.ownerUid && post.ownerUid !== user.uid) {
-      const username = profileSnapshot.data()?.username || 'Coriva member';
+      const profileUsername = profileSnapshot.data()?.username;
+      const username = typeof profileUsername === 'string' && profileUsername.length ? profileUsername : 'Coriva member';
       transaction.set(doc(db, 'notifications', post.ownerUid, 'items', `like_${id}_${user.uid}`), {
         kind: 'post_like', postId: id, likerUid: user.uid, username,
         title: 'Post liked', body: `${username} has liked your post!`,

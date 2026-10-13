@@ -38,3 +38,14 @@ A successful double-tap like gives a short vibration where the browser supports
 it. Upload the updated `post-likes.js`, `index.html`, and `styles.css`.
 The same previously supplied Firestore rules are still required; no new rule
 changes are needed for this gesture fix.
+
+## Like saving fix
+
+Publish the full current `firestore-rules.txt` in Firebase Console >
+Firestore Database > Rules, then upload the updated `index.html`,
+`app.bundle.js`, and `post-likes.js` and reload the site.
+
+The notification username now handles accounts with a missing profile or
+null/invalid username. The site reports permission, sign-in, and connection
+errors separately. Likes, unlikes, notifications, and legacy profile handling
+were tested against the Firestore emulator using the included rules.

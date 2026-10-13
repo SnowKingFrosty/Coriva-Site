@@ -57,6 +57,7 @@
             </div>
             <div class="social-links profile-social-links" id="profileSocialLinks" aria-label="Creator social links"></div>
             <button type="button" class="ghost-btn profile-action" id="profileLoginButton">Sign in</button>
+            <button type="button" class="primary-btn profile-action" id="profileOpenButton">View profile</button>
             <button type="button" class="ghost-btn profile-action hidden" id="profileEditButton">Edit profile</button>
             <button type="button" class="primary-btn profile-action hidden" id="becomeCreatorButton">Become a creator</button>
           </section>
@@ -1176,9 +1177,32 @@
       </section>
     </div>
 
+
+    <main id="publicProfilePage" class="public-profile-page hidden" aria-hidden="true" aria-labelledby="publicProfileName">
+      <nav class="public-profile-nav"><button id="publicProfileBack" type="button" class="ghost-btn">← Back to Coriva</button><strong>Coriva</strong></nav>
+      <section class="glass-card public-profile-hero">
+        <div class="public-profile-cover"><img id="publicProfileBanner" class="hidden" alt="Profile banner" /></div>
+        <div class="public-profile-details">
+          <div class="public-profile-identity"><div id="publicProfileAvatar" class="avatar public-profile-avatar"></div><div><h1 id="publicProfileName" tabindex="-1"></h1><p id="publicProfileHandle" class="helper-text"></p><div id="publicProfileSocials" class="social-links" aria-label="Social links"></div></div></div>
+          <div class="public-profile-actions"><button type="button" id="publicProfileEdit" class="ghost-btn hidden">Customize profile</button><button type="button" id="publicProfileShare" class="primary-btn">Share profile</button></div>
+          <p id="publicProfileSpecialty" class="helper-text"></p><p id="publicProfileAbout" class="public-profile-bio"></p>
+          <p id="publicProfileStatus" role="status" aria-live="polite"></p>
+          <form id="publicProfileEditor" class="store-form public-profile-editor hidden">
+            <label><span>Profile banner</span><input type="file" id="publicProfileBannerInput" accept="image/*" /></label><p class="helper-text">Choose a wide image, up to 20 MB.</p>
+            <label><span>About you</span><textarea id="publicProfileBioInput" rows="3" maxlength="500" placeholder="Tell visitors about yourself and what you create."></textarea></label>
+            <div class="public-profile-actions"><button type="submit" class="primary-btn" id="publicProfileSave">Save profile</button><button type="button" class="ghost-btn" id="publicProfileRemoveBanner">Remove banner</button><button type="button" class="ghost-btn" id="publicProfileAccount">Edit photo & social links</button></div>
+          </form>
+          <section id="publicProfileSharePanel" class="public-profile-share hidden" aria-label="Share this profile">
+            <div><h2>Share your Coriva profile</h2><p class="helper-text">One link for your profile and storefronts.</p><label for="publicProfileURL">Profile link</label><input id="publicProfileURL" type="url" readonly /><div class="public-profile-actions"><button type="button" id="publicProfileCopy" class="secondary-btn">Copy link</button><a id="publicProfileQRDownload" class="ghost-btn hidden" download="coriva-profile-qr.png">Download QR code</a></div><p id="publicProfileShareStatus" role="status" aria-live="polite"></p></div><div id="publicProfileQR" aria-label="Profile QR code"></div>
+          </section>
+        </div>
+      </section>
+      <section class="glass-card public-profile-store-section" aria-labelledby="publicProfileStoresTitle"><div class="public-profile-section-heading"><h2 id="publicProfileStoresTitle">Storefronts <span id="publicProfileStoreCount">0</span></h2><button type="button" id="publicProfileCreateStore" class="secondary-btn hidden">Create storefront</button></div><div id="publicProfileStores" class="public-profile-store-grid"></div></section>
+    </main>
+
     <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=26" defer></script>
+    <script src="app.bundle.js?v=27" defer></script>
     <script src="feed-viewer.js?v=1" defer></script>
     <script src="post-views.js?v=1" defer></script>
     <script src="post-likes.js?v=3" defer></script>
