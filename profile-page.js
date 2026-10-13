@@ -65,6 +65,7 @@ export function initProfilePage(api) {
       ? 'Your storefronts will appear here when you create one.' : 'No public storefronts yet.'));
   }
   function close(updateURL = true) {
+    if (api.navigateHome) { api.navigateHome(); return; }
     shareRevision++; uid = null; viewed = null;
     unsubscribe?.(); unsubscribe = null;
     page.classList.add('hidden'); page.setAttribute('aria-hidden', 'true');
@@ -85,6 +86,7 @@ export function initProfilePage(api) {
     el('publicProfileStores').replaceChildren(); el('publicProfileBanner').classList.add('hidden');
     ['publicProfileEditor', 'publicProfileSharePanel', 'publicProfileEdit', 'publicProfileCreateStore'].forEach(id => el(id).classList.add('hidden'));
     status('');
+    el('publicProfileRetry').classList.add('hidden');
     api.closeWelcome();
     document.querySelector('.page-shell').classList.add('hidden');
     page.classList.remove('hidden'); page.setAttribute('aria-hidden', 'false');
@@ -100,11 +102,14 @@ export function initProfilePage(api) {
         refresh();
         status('This profile has not been shared yet or is no longer available.');
       } else { status(''); refresh(); }
+      el('publicProfileRetry').classList.add('hidden');
     }, error => {
       if (!owner()) el('publicProfileName').textContent = 'Profile unavailable';
-      status('Unable to load the shared profile. Please try again.');
+      status('Unable to load this public profile. Check your connection and try again.');
+      el('publicProfileRetry').classList.remove('hidden');
     });
   }
+  el('publicProfileRetry').addEventListener('click', () => open(uid, false));
   el('publicProfileBack').addEventListener('click', () => close());
   el('publicProfileAccount').addEventListener('click', api.editAccount);
   el('publicProfileCreateStore').addEventListener('click', api.createStore);

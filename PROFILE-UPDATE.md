@@ -22,6 +22,16 @@ Profile banner uploads use the existing ImageKit upload service. Profile QR gene
 
 Rebuild after editing JavaScript with `npm ci` followed by `npm run build`.
 
-## Branded QR codes
+## Signed-out profile links
 
-All Coriva-generated profile and invoice payment QR codes use the same embedded generator, with the Coriva logo centered on a small badge. High error correction, a white margin, and crisp full-resolution exports preserve scanning. Profile, payment, and long checkout links were decoded successfully during validation.
+Initial shared profile URLs now open in a dedicated public view without starting sign-in or loading private features. The view makes unauthenticated HTTPS requests only for public profile and storefront records. It works without local browser storage, includes a retry button after loading failures, and can show legacy creators from their already-public storefront data. Back and storefront buttons navigate to their normal pages. Owners can continue customizing their profile from View profile on the main page.
+
+Deploy the updated website files, especially index.html, app.bundle.js, and styles.css. The main-page layout is unchanged. Existing NFC links and QR codes keep the same URLs. No APK rebuild or new Firestore rules are required for this fix when the previously supplied publicProfiles rules are deployed.
+
+Validation: production public-profile and storefront endpoints allow unauthenticated reads; built-app tests cover guest access with storage blocked and an iPhone viewport/user agent, public storefronts, QR sharing, failed-request retries, legacy storefront fallback, and normal main-page startup. Real Safari and physical iPhone testing were not available.
+
+## First-visit welcome after public profiles
+
+Back to Coriva opens the normal homepage. Visitors who have not seen onboarding get the welcome choices and can sign up or switch to sign in. The welcome is remembered as soon as it appears, using local browser storage and a first-party cookie fallback. Subsequent returns skip onboarding. Existing welcome markers are respected. Public profiles continue to open without signing in.
+
+Validated first-time back navigation, both authentication choices, and repeat back navigation with local storage blocked.

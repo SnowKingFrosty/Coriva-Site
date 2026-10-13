@@ -4,8 +4,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 let logoPromise;
 function loadLogo() {
   if (!logoPromise) logoPromise = new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
+    const image = new Image(); image.onload = () => resolve(image);
     image.onerror = () => { logoPromise = null; reject(new Error('The Coriva QR logo could not load. Please retry.')); };
     image.src = corivaQRLogo;
   });
@@ -13,35 +12,20 @@ function loadLogo() {
 }
 async function createBrandedQR(url) {
   const logo = await loadLogo();
-  const scratch = document.createElement('div');
-  const code = new QRCode(scratch, { text: url, width: 224, height: 224, correctLevel: QRCode.CorrectLevel.H });
-  const matrix = code._oQRCode;
-  const count = matrix.getModuleCount(), cell = 8, quiet = 4 * cell;
-  const size = count * cell;
-  const output = document.createElement('canvas');
-  output.width = output.height = size + quiet * 2;
-  const context = output.getContext('2d');
-  if (!context) throw new Error('Your browser could not create the QR image.');
-  context.fillStyle = '#ffffff'; context.fillRect(0, 0, output.width, output.height);
-  context.fillStyle = '#000000';
-  for (let row = 0; row < count; row++) for (let col = 0; col < count; col++) {
-    if (matrix.isDark(row, col)) context.fillRect(quiet + col * cell, quiet + row * cell, cell, cell);
-  }
-  // H correction and a small center badge preserve the code's finder patterns.
-  const backing = Math.round(size * .18), badge = Math.round(size * .14);
-  const center = output.width / 2;
-  context.fillStyle = '#ffffff'; context.fillRect(center - backing / 2, center - backing / 2, backing, backing);
-  context.fillStyle = '#121a2d'; context.fillRect(center - badge / 2, center - badge / 2, badge, badge);
-  context.drawImage(logo, center - badge / 2, center - badge / 2, badge, badge);
-  return output;
+  const code = new QRCode(document.createElement('div'), {text:url,width:224,height:224,correctLevel:QRCode.CorrectLevel.H});
+  const matrix=code._oQRCode, count=matrix.getModuleCount(), cell=8, quiet=32, size=count*cell;
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=size+quiet*2;
+  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser could not create the QR image.');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#000000';
+  for(let row=0;row<count;row++)for(let col=0;col<count;col++)if(matrix.isDark(row,col))ctx.fillRect(quiet+col*cell,quiet+row*cell,cell,cell);
+  const center=canvas.width/2,backing=Math.round(size*.18),badge=Math.round(size*.14);
+  ctx.fillStyle='#ffffff';ctx.fillRect(center-backing/2,center-backing/2,backing,backing);
+  ctx.fillStyle='#121a2d';ctx.fillRect(center-badge/2,center-badge/2,badge,badge);ctx.drawImage(logo,center-badge/2,center-badge/2,badge,badge);
+  return canvas;
 }
-export async function generateCorivaQR(url) {
-  return (await createBrandedQR(url)).toDataURL('image/png');
-}
-export async function generateProfileQR(holder, url) {
-  const canvas = await createBrandedQR(url);
-  canvas.style.width = '224px'; canvas.style.height = '224px';
-  canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', 'Coriva profile QR code');
-  holder.replaceChildren(canvas);
+export async function generateCorivaQR(url) {return (await createBrandedQR(url)).toDataURL('image/png');}
+export async function generateProfileQR(holder,url) {
+  const canvas=await createBrandedQR(url);canvas.style.width='224px';canvas.style.height='224px';
+  canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Coriva profile QR code');holder.replaceChildren(canvas);
   return canvas.toDataURL('image/png');
 }
