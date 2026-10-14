@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=38" />
+    <link rel="stylesheet" href="styles.css?v=39" />
   </head>
   <body>
     <div class="page-shell">
@@ -158,8 +158,8 @@
     </div>
 
     <main class="room-page hidden" id="roomPage" aria-hidden="true">
+<header class="storefront-page-nav room-page-nav branded-subpage-nav">
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="storefront-page-nav room-page-nav branded-subpage-nav">
         
         <button type="button" class="secondary-btn" id="closeRoomPage" aria-label="Back">Back</button>
         
@@ -438,8 +438,8 @@
     </div>
 
     <main class="storefront-page hidden" id="storeTemplateModal" aria-hidden="true">
+<header class="storefront-page-nav branded-subpage-nav">
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="storefront-page-nav branded-subpage-nav">
         
         <button type="button" class="secondary-btn" id="closeStoreTemplate" aria-label="Back">Back</button>
         
@@ -1134,8 +1134,8 @@
       <button type="button" id="copyStorefrontLink" class="primary-btn">Copy link</button><p id="shareStorefrontStatus" role="status" aria-live="polite"></p>
     </section></div>
     <main id="storeMessagesPage" class="store-messages-page hidden" aria-hidden="true">
-      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1 id="storeMessagesTitle">Storefront messages</h1></div><button type="button" class="secondary-btn" id="closeStoreMessages" aria-label="Back">Back</button></header>
+<header class="topbar branded-subpage-topbar">
+      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div><div class="subpage-title-group"><h1 id="storeMessagesTitle">Storefront messages</h1></div><button type="button" class="secondary-btn" id="closeStoreMessages" aria-label="Back">Back</button></header>
       <p id="storeMessagesStatus" class="account-status" role="status"></p>
       <div class="store-messages-layout">
         <aside class="glass-card jobs-section"><h2>Conversations</h2><div id="storeConversations" class="jobs-list"></div></aside>
@@ -1146,8 +1146,8 @@
       </div>
     </main>
     <main id="tasksPage" class="notifications-page hidden" aria-hidden="true">
-      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1>Tasks</h1></div><div class="subpage-header-actions"><button type="button" id="tasksNotificationsButton" class="secondary-btn">Notifications</button><button type="button" id="closeTasks" class="secondary-btn" aria-label="Back">Back</button></div></header>
+<header class="topbar branded-subpage-topbar">
+      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div><div class="subpage-title-group"><h1>Tasks</h1></div><div class="subpage-header-actions"><button type="button" id="tasksNotificationsButton" class="secondary-btn">Notifications</button><button type="button" id="closeTasks" class="secondary-btn" aria-label="Back">Back</button></div></header>
       <section class="glass-card jobs-section"><h2>Your projects</h2><p class="helper-text">Track projects awarded to your store.</p><p id="tasksStatus" class="account-status" role="status"></p><div id="tasksList" class="request-grid"></div></section>
     </main>
     <div id="buyerRequestModal" class="modal-overlay hidden" aria-hidden="true"><section class="invoice-modal glass-card" role="dialog" aria-modal="true" aria-labelledby="buyerRequestTitle"><button type="button" id="closeBuyerRequest" class="modal-close" aria-label="Close">×</button><h2 id="buyerRequestTitle">Post a buyer request</h2>
@@ -1157,8 +1157,8 @@
     <div id="requestDetailModal" class="modal-overlay hidden" aria-hidden="true"><section class="invoice-modal glass-card" role="dialog" aria-modal="true" aria-label="Buyer request details"><button type="button" id="closeRequestDetail" class="modal-close" aria-label="Close">×</button><p id="requestDetailStatus" role="status"></p><div id="requestDetail"></div></section></div>
 
     <main id="notificationsPage" class="notifications-page hidden" aria-hidden="true">
-      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1>Notifications &amp; jobs</h1></div><div class="subpage-header-actions"><button type="button" class="secondary-btn hidden" id="notificationTasksButton">Tasks</button><button type="button" class="secondary-btn" id="closeNotifications" aria-label="Back">Back</button></div></header>
+<header class="topbar branded-subpage-topbar">
+      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div><div class="subpage-title-group"><h1>Notifications &amp; jobs</h1></div><div class="subpage-header-actions"><button type="button" class="secondary-btn hidden" id="notificationTasksButton">Tasks</button><button type="button" class="secondary-btn" id="closeNotifications" aria-label="Back">Back</button></div></header>
       <p id="jobsStatus" class="account-status" aria-live="polite"></p>
       <div class="jobs-layout">
         <section class="glass-card jobs-section"><h2>Notifications</h2><p class="helper-text">Your latest 100 updates</p><div id="notificationList" class="jobs-list"></div></section>
@@ -1191,8 +1191,8 @@
 
 
     <main id="publicProfilePage" class="public-profile-page hidden" aria-hidden="true" aria-labelledby="publicProfileName">
-      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <nav class="public-profile-nav branded-subpage-nav"><button id="publicProfileBack" type="button" class="ghost-btn" aria-label="Back">Back</button></nav>
+<nav class="public-profile-nav branded-subpage-nav">
+      <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div><button id="publicProfileBack" type="button" class="ghost-btn" aria-label="Back">Back</button></nav>
       <section class="glass-card public-profile-hero">
         <div class="public-profile-cover"><img id="publicProfileBanner" class="hidden" alt="Profile banner" /><div class="public-profile-shade"></div>
           <div class="public-profile-identity"><div id="publicProfileAvatar" class="avatar public-profile-avatar"></div><div><h1 id="publicProfileName" tabindex="-1"></h1><p id="publicProfileHandle" class="helper-text"></p><div id="publicProfileSocials" class="social-links" aria-label="Social links"></div></div></div>
