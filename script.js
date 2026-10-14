@@ -3678,8 +3678,10 @@ profilePageController = initProfilePage({
 });
 
 window.corivaPrepareBusinessCard = async () => {
-  if (!auth.currentUser || !currentProfile) throw new Error('Sign in to share your profile.');
-  await publishPublicProfile();
+  const page = document.getElementById('publicProfilePage');
+  const uid = new URL(window.location.href).searchParams.get('profile');
+  if (!uid || page?.dataset.profileUid !== uid) throw new Error('Wait for the public profile to load before sharing.');
+  if (uid === auth.currentUser?.uid && currentProfile) await publishPublicProfile();
 };
 
 window.corivaReady = true;

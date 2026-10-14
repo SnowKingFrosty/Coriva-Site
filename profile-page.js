@@ -27,7 +27,9 @@ export function initProfilePage(api) {
     el('publicProfileEdit').classList.toggle('hidden', !owner() || !p);
     if (!owner()) el('publicProfileEditor').classList.add('hidden');
     el('publicProfileCreateStore').classList.toggle('hidden', !owner() || p?.accountType === 'shopper');
-    if (!p) { el('publicProfileStores').replaceChildren(); el('publicProfileStoreCount').textContent = '0'; return; }
+    el('publicProfileShare').disabled = !p;
+    if (!p) { delete page.dataset.profileUid; el('publicProfileStores').replaceChildren(); el('publicProfileStoreCount').textContent = '0'; return; }
+    page.dataset.profileUid = uid;
     el('publicProfileName').textContent = p.username || 'Coriva member';
     el('publicProfileHandle').textContent = p.username ? '@' + p.username.replace(/^@/, '') : '';
     el('publicProfileAbout').textContent = p.bio || '';
@@ -66,7 +68,7 @@ export function initProfilePage(api) {
   }
   function close(updateURL = true) {
     if (api.navigateHome) { api.navigateHome(); return; }
-    shareRevision++; uid = null; viewed = null;
+    shareRevision++; uid = null; viewed = null; delete page.dataset.profileUid;
     unsubscribe?.(); unsubscribe = null;
     page.classList.add('hidden'); page.setAttribute('aria-hidden', 'true');
     document.querySelector('.page-shell').classList.remove('hidden');
@@ -79,7 +81,8 @@ export function initProfilePage(api) {
   }
   function open(id, updateURL = true) {
     if (!id) { api.signIn(); return; }
-    unsubscribe?.(); shareRevision++; uid = id; viewed = null;
+    unsubscribe?.(); shareRevision++; uid = id; viewed = null; delete page.dataset.profileUid;
+    el('publicProfileShare').disabled = true;
     el('publicProfileName').textContent = 'Loading profile…';
     ['publicProfileHandle', 'publicProfileAbout', 'publicProfileSpecialty'].forEach(id => el(id).textContent = '');
     el('publicProfileAvatar').replaceChildren(); el('publicProfileSocials').replaceChildren();
@@ -141,14 +144,14 @@ export function initProfilePage(api) {
     catch (error) { status('Unable to remove banner: ' + error.message); }
   });
   el('publicProfileShare').addEventListener('click', async () => {
-    if (owner() && /CorivaAndroid\//i.test(navigator.userAgent)) {
+    if (page.dataset.profileUid === uid && /CorivaAndroid\//i.test(navigator.userAgent)) {
       if (openingNativeShare) return;
       openingNativeShare = true;
       const button = el('publicProfileShare'), currentUid = uid;
-      button.disabled = true; status('Preparing your Digital Business Card…');
+      button.disabled = true; status('Preparing this profile for sharing…');
       try {
-        await api.publish();
-        if (uid === currentUid && owner()) {
+        if (owner()) await api.publish();
+        if (uid === currentUid && page.dataset.profileUid === currentUid) {
           if (api.openNativeShare) api.openNativeShare();
           else window.location.href = 'coriva-app://business-card';
         }

@@ -49,3 +49,7 @@ Validation covers the built app's public directory, pagination, signed-out searc
 ## Android Share profile
 
 In the Coriva Android app, Share profile on your own profile opens the native Digital Business Card after publishing your public profile. The screen provides NFC, QR and Copy link. Regular browsers and other people's public profiles retain website sharing. Install Coriva-App-v1.5.apk to get the native Copy link button, and upload the updated website files including app.bundle.js and index.html.
+
+## Share other people's profiles in Android
+
+Native sharing is available for any loaded public profile, including profiles whose owners have never signed into the app. The selected profile's account ID is used for NFC, QR and Copy link. Only owners can edit or publish their profile data; sharing someone else's profile performs no profile writes. Install Coriva-App-v1.6.apk and deploy these website files. Unavailable/loading profiles cannot open the native sharing screen.
