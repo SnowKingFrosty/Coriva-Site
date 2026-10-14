@@ -3,7 +3,7 @@ import { generateProfileQR } from './profile-qr.js';
 export function initProfilePage(api) {
   const el = id => document.getElementById(id);
   const page = el('publicProfilePage');
-  let uid = null, viewed = null, unsubscribe = null, shareRevision = 0;
+  let uid = null, viewed = null, unsubscribe = null, shareRevision = 0, openingNativeShare = false;
   const node = (tag, cls, text) => {
     const item = document.createElement(tag); item.className = cls || '';
     if (text) item.textContent = text;
@@ -141,6 +141,23 @@ export function initProfilePage(api) {
     catch (error) { status('Unable to remove banner: ' + error.message); }
   });
   el('publicProfileShare').addEventListener('click', async () => {
+    if (owner() && /CorivaAndroid\//i.test(navigator.userAgent)) {
+      if (openingNativeShare) return;
+      openingNativeShare = true;
+      const button = el('publicProfileShare'), currentUid = uid;
+      button.disabled = true; status('Preparing your Digital Business Card…');
+      try {
+        await api.publish();
+        if (uid === currentUid && owner()) {
+          if (api.openNativeShare) api.openNativeShare();
+          else window.location.href = 'coriva-app://business-card';
+        }
+        status('');
+      } catch (error) { status('Unable to prepare sharing: ' + error.message); }
+      finally { button.disabled = false; setTimeout(() => {openingNativeShare = false;}, 1500); }
+      return;
+    }
+
     const panel = el('publicProfileSharePanel');
     panel.classList.toggle('hidden');
     const revision = ++shareRevision;

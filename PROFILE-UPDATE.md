@@ -35,3 +35,17 @@ Validation: production public-profile and storefront endpoints allow unauthentic
 Back to Coriva opens the normal homepage. Visitors who have not seen onboarding get the welcome choices and can sign up or switch to sign in. The welcome is remembered as soon as it appears, using local browser storage and a first-party cookie fallback. Subsequent returns skip onboarding. Existing welcome markers are respected. Public profiles continue to open without signing in.
 
 Validated first-time back navigation, both authentication choices, and repeat back navigation with local storage blocked.
+
+## Profile discovery and chat links
+
+Select Profiles in the Discover feed to browse and search public profiles. Search supports partial usernames, @usernames, case-insensitive matching, and specialties. Results show profile pictures, public usernames, specialties, and storefront counts when available. Both creator and shopper public profiles are included. Refresh retries a failed load and retrieves new profiles. The directory reads paginated public records without requiring sign-in and never reads private account documents.
+
+Click a message sender's username in a chat room to open their public profile. Links use the sender's account ID, so a username change does not break them. Legacy messages with no sender account ID retain a text label.
+
+Upload the updated index.html, styles.css, app.bundle.js and source files. Existing publicProfiles Firestore rules already permit discovery; no rules change is required.
+
+Validation covers the built app's public directory, pagination, signed-out search, partial/case/@ and specialty matching, empty results, clear, retry, guest profile navigation, the production chat-message renderer's account-ID links, renamed users, and mobile layout.
+
+## Android Share profile
+
+In the Coriva Android app, Share profile on your own profile opens the native Digital Business Card after publishing your public profile. The screen provides NFC, QR and Copy link. Regular browsers and other people's public profiles retain website sharing. Install Coriva-App-v1.5.apk to get the native Copy link button, and upload the updated website files including app.bundle.js and index.html.

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Social networking platform for coders and web developers to share their work and collaborate with people around the world."
+      content="A social storefront platform where creators launch products, accept payments, and collaborate in rooms."
     />
-    <title>Coriva | Code Your Dreams</title>
+    <title>Coriva | Web design & web development</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=3" />
     <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png?v=3" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=35" />
+    <link rel="stylesheet" href="styles.css?v=36" />
   </head>
   <body>
     <div class="page-shell">
@@ -25,7 +25,7 @@
           <div class="brand-mark coriva-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
           <div>
             <div class="brand-name">Coriva</div>
-            <div class="brand-tag">Web design & development</div>
+            <div class="brand-tag">Web design & dev</div>
           </div>
         </div>
 
@@ -79,12 +79,10 @@
             <div class="panel-title">Popular services</div>
             <div class="tag-row">
               <span>Web Design</span>
-              <span>Web Development</span>
+              <span>Web Dev</span>
               <span>Landing Pages</span>
               <span>E-commerce</span>
               <span>Brand Sites</span>
-              <span>Custom Coding Services</span>
-              <span>3D Modeling Services</span>
             </div>
           </div>
         </aside>
@@ -98,13 +96,14 @@
 
           <div class="story-strip glass-card" role="group" aria-label="Discover feed filter">
             <button type="button" class="story active" data-feed-filter="all">For you</button>
+            <button type="button" class="story" data-feed-filter="profiles">Profiles</button>
             <button type="button" class="story" data-feed-filter="rooms">Rooms</button>
             <button type="button" class="story" data-feed-filter="stores">Stores</button>
             <button type="button" class="story" data-feed-filter="requests">Buyer requests</button>
           </div>
 
           <form class="discover-search" id="discoverSearchForm" role="search">
-            <label class="visually-hidden" for="discoverSearchInput">Search posts, chat rooms, or stores</label>
+            <label class="visually-hidden" for="discoverSearchInput">Search posts, profiles, chat rooms, or stores</label>
             <input id="discoverSearchInput" type="search" placeholder="Search posts, creators, or storefronts" autocomplete="off" />
             <button type="button" class="clear-search hidden" id="clearDiscoverSearch" aria-label="Clear Discover search">×</button>
             <span class="visually-hidden" id="discoverSearchStatus" aria-live="polite"></span>
@@ -142,6 +141,11 @@
               </div></div>
               <p id="storesDirectoryStatus" class="helper-text" role="status"></p>
               <div class="store-directory-grid" id="storesDirectoryGrid"></div>
+            </section>
+            <section id="profilesPanel" class="glass-card panel stores-feed-panel hidden" aria-labelledby="profilesDirectoryTitle">
+              <div class="panel-header"><div><h2 id="profilesDirectoryTitle">Profiles</h2><p class="helper-text">Find people by username or specialty and explore their storefronts.</p></div><button type="button" class="secondary-btn" data-refresh-profiles>Refresh</button></div>
+              <p id="profilesDirectoryStatus" class="helper-text" role="status" aria-live="polite"></p>
+              <div id="profilesDirectoryGrid" class="profile-directory-grid"></div>
             </section>
             <section id="buyerRequestsPanel" class="glass-card panel hidden" aria-labelledby="buyerRequestsTitle">
               <div class="panel-header"><div><h2 id="buyerRequestsTitle">Buyer requests</h2><p class="helper-text">Post a project and choose the store you want to work with.</p></div><button type="button" id="newBuyerRequest" class="primary-btn">Post a request</button></div>
@@ -1212,7 +1216,7 @@
 
     <script src="media-config.js?v=1" defer></script>
     <script src="startup.js?v=2" defer></script>
-    <script src="app.bundle.js?v=32" defer></script>
+    <script src="app.bundle.js?v=34" defer></script>
     <script src="feed-viewer.js?v=1" defer></script>
     <script src="post-views.js?v=1" defer></script>
     <script src="post-likes.js?v=3" defer></script>

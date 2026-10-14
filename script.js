@@ -1,3 +1,4 @@
+import { initProfileDirectory, publicProfileURL } from './profile-directory.js';
 import { hasSeenWelcome, rememberWelcome } from './welcome-state.js';
 import { getSocialService, getProfileSocialUrls, createSocialAnchor } from './social-links.js';
 import { generateCorivaQR } from './profile-qr.js';
@@ -111,6 +112,7 @@ const passwordResetForm = document.getElementById('passwordResetForm');
 const passwordResetStatus = document.getElementById('passwordResetStatus');
 const discoverFeed = document.getElementById('discoverFeed');
 const feedEmptyState = document.getElementById('feedEmptyState');
+const profilesPanel = document.getElementById('profilesPanel');
 const discoverSearchInput = document.getElementById('discoverSearchInput');
 const discoverSearchForm = document.getElementById('discoverSearchForm');
 const discoverSearchStatus = document.getElementById('discoverSearchStatus');
@@ -582,7 +584,14 @@ const renderRoomMessages = () => {
       `chat-message${isMine ? ' mine' : ''}`
     );
     const author = createElement('div', 'room-message-identity');
-    author.append(createAvatar(message.senderPhotoURL, message.senderUsername), createElement('strong', 'room-message-author', message.senderUsername || 'Coriva member'));
+    const username = message.senderUsername || 'Coriva member';
+    const name = createElement(message.senderUid ? 'a' : 'strong', 'room-message-author', username);
+    if (message.senderUid) {
+      name.href = publicProfileURL(message.senderUid);
+      name.setAttribute('aria-label', 'View ' + username + ' profile');
+      name.classList.add('room-profile-link');
+    }
+    author.append(createAvatar(message.senderPhotoURL, username), name);
     bubble.append(author);
     bubble.classList.toggle('mentioned', message.mentionUids?.includes(auth.currentUser?.uid) || false);
     const gifUrl = isRoomGifUrl(message.gifUrl) ? message.gifUrl : getRoomGifUrl(message.gifId);
@@ -841,7 +850,7 @@ const createDiscoverPostCard = (post) => {
 };
 
 const renderDiscoverFeed = () => {
-  const searchLabel = activeFeedFilter === 'requests' ? 'Search buyer requests' : activeFeedFilter === 'stores' ? 'Search stores, categories, or @handle' : activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
+  const searchLabel = activeFeedFilter === 'profiles' ? 'Search profiles by username or specialty' : activeFeedFilter === 'requests' ? 'Search buyer requests' : activeFeedFilter === 'stores' ? 'Search stores, categories, or @handle' : activeFeedFilter === 'rooms' ? 'Search chat rooms or @creator' : 'Search posts, creators, or storefronts';
   discoverSearchInput.placeholder = searchLabel;
   discoverSearchInput.setAttribute('aria-label', searchLabel);
   const postResults = discoverPosts.filter((post) => {
@@ -857,8 +866,15 @@ const renderDiscoverFeed = () => {
     ].filter(Boolean).join(' ').toLowerCase();
     return matchesFilter && searchableText.includes(discoverSearchQuery);
   });
-  discoverFeed.classList.toggle('stores-mode', ['stores', 'requests'].includes(activeFeedFilter));
+  discoverFeed.classList.toggle('stores-mode', ['stores', 'requests', 'profiles'].includes(activeFeedFilter));
   discoverFeed.classList.toggle('rooms-mode', activeFeedFilter === 'rooms');
+  if (activeFeedFilter === 'profiles') {
+    const panel = profilesPanel;
+    panel.classList.remove('hidden'); discoverFeed.replaceChildren(panel);
+    profileDirectory.show(discoverSearchQuery);
+    clearDiscoverSearch.classList.toggle('hidden', !discoverSearchQuery);
+    mediaObserver?.disconnect(); return;
+  }
   if (activeFeedFilter === 'requests') {
     buyerRequests.render();
     buyerRequestsPanel.classList.remove('hidden');
@@ -3142,7 +3158,7 @@ managedStoreList.addEventListener('click', (event) => {
   deleteDoc(doc(db, 'stores', store.id)).catch(showCloudError);
   renderStores();
   renderManagedStores();
-  if (['stores', 'requests'].includes(activeFeedFilter)) renderDiscoverFeed();
+  if (['stores', 'requests', 'profiles'].includes(activeFeedFilter)) renderDiscoverFeed();
 });
 
 if (storeForm) {
@@ -3492,6 +3508,11 @@ const buyerRequests = initBuyerRequests({
   openStore: id => { const store = stores.find(s => s.id === id); if (store) openStoreTemplate(store); else window.alert('This storefront is unavailable.'); }
 });
 
+const profileDirectory = initProfileDirectory({
+  panel: document.getElementById('profilesPanel'), grid: document.getElementById('profilesDirectoryGrid'),
+  status: document.getElementById('profilesDirectoryStatus'), searchStatus: discoverSearchStatus,
+  stores: () => stores
+});
 bindLoginModal();
 bindStoreModal();
 renderStores();
@@ -3502,7 +3523,7 @@ onSnapshot(collection(db, 'stores'), (snapshot) => {
   stores = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
   renderStores();
   renderManagedStores();
-  if (['stores', 'requests'].includes(activeFeedFilter)) renderDiscoverFeed();
+  if (['stores', 'requests', 'profiles'].includes(activeFeedFilter)) renderDiscoverFeed();
   if (pendingStoreLink) {
     const linkedStore = stores.find(store => store.id === pendingStoreLink);
     pendingStoreLink = null;
@@ -3655,6 +3676,11 @@ profilePageController = initProfilePage({
     if (auth.currentUser?.uid === user.uid) { currentProfile = updated; renderProfileArea(); }
   }
 });
+
+window.corivaPrepareBusinessCard = async () => {
+  if (!auth.currentUser || !currentProfile) throw new Error('Sign in to share your profile.');
+  await publishPublicProfile();
+};
 
 window.corivaReady = true;
 window.dispatchEvent(new Event("coriva-ready"));
