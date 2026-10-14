@@ -53,3 +53,9 @@ In the Coriva Android app, Share profile on your own profile opens the native Di
 ## Share other people's profiles in Android
 
 Native sharing is available for any loaded public profile, including profiles whose owners have never signed into the app. The selected profile's account ID is used for NFC, QR and Copy link. Only owners can edit or publish their profile data; sharing someone else's profile performs no profile writes. Install Coriva-App-v1.6.apk and deploy these website files. Unavailable/loading profiles cannot open the native sharing screen.
+
+## Compact mobile header buttons
+
+Mobile header actions now use compact widths, spacing and shorter visual labels so they stay side by side. Main creator controls, public profile and sharing controls, storefront navigation, rooms, tasks, messages and notifications are covered. Dynamic Manage/Done states stay synchronized. Full accessible labels are retained, while desktop labels and layouts remain unchanged. Upload index.html and styles.css with this package; the app's live website receives the styling without an APK update.
+
+Validation covers 320, 360, 390 and 700px widths with all creator controls visible, same-row alignment, no horizontal clipping, accessible labels, and desktop label visibility.

@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=36" />
+    <link rel="stylesheet" href="styles.css?v=37" />
   </head>
   <body>
     <div class="page-shell">
@@ -39,9 +39,9 @@
           <button type="button" class="ghost-btn" id="loginButton">Log in</button>
           <button type="button" class="ghost-btn hidden" id="logoutButton">Log out</button>
           <button type="button" class="ghost-btn hidden" id="accountButton">Account</button>
-          <button type="button" class="secondary-btn hidden" id="manageStoresButton">Manage storefronts</button>
-          <button type="button" class="secondary-btn hidden" id="managePostsButton">Manage posts</button>
-          <button type="button" class="primary-btn" id="newStoreButton">New storefront</button>
+          <button type="button" class="secondary-btn hidden" id="manageStoresButton" aria-label="Manage storefronts"><span class="desktop-button-label">Manage storefronts</span><span class="mobile-button-label" aria-hidden="true">Stores</span></button>
+          <button type="button" class="secondary-btn hidden" id="managePostsButton" aria-label="Manage posts"><span class="desktop-button-label">Manage posts</span><span class="mobile-button-label" aria-hidden="true">Posts</span></button>
+          <button type="button" class="primary-btn" id="newStoreButton" aria-label="New storefront"><span class="desktop-button-label">New storefront</span><span class="mobile-button-label" aria-hidden="true">+ Store</span></button>
         </div>
       </header>
       <div class="cloud-status hidden" id="cloudStatus" role="status" aria-live="polite"></div>
@@ -161,7 +161,7 @@
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
       <header class="storefront-page-nav room-page-nav branded-subpage-nav">
         
-        <button type="button" class="secondary-btn" id="closeRoomPage">← Back to Rooms</button>
+        <button type="button" class="secondary-btn" id="closeRoomPage" aria-label="← Back to Rooms"><span class="desktop-button-label">← Back to Rooms</span><span class="mobile-button-label" aria-hidden="true">← Back</span></button>
         
         <button type="button" class="primary-btn hidden" id="manageRoomButton" aria-expanded="false">Manage room</button>
       </header>
@@ -441,7 +441,7 @@
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
       <header class="storefront-page-nav branded-subpage-nav">
         
-        <button type="button" class="secondary-btn" id="closeStoreTemplate">← Back to Coriva</button>
+        <button type="button" class="secondary-btn" id="closeStoreTemplate" aria-label="← Back to Coriva"><span class="desktop-button-label">← Back to Coriva</span><span class="mobile-button-label" aria-hidden="true">← Back</span></button>
         
         <div class="storefront-nav-actions"><button type="button" class="primary-btn hidden" id="manageStorefrontButton" aria-expanded="false">Manage storefront</button><button type="button" class="secondary-btn hidden" id="storefrontMessagesButton">Messages</button><button type="button" class="secondary-btn" id="shareStorefrontButton">Share</button></div>
       </header>
@@ -1135,7 +1135,7 @@
     </section></div>
     <main id="storeMessagesPage" class="store-messages-page hidden" aria-hidden="true">
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1 id="storeMessagesTitle">Storefront messages</h1></div><button type="button" class="secondary-btn" id="closeStoreMessages">Back to storefront</button></header>
+      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1 id="storeMessagesTitle">Storefront messages</h1></div><button type="button" class="secondary-btn" id="closeStoreMessages" aria-label="Back to storefront"><span class="desktop-button-label">Back to storefront</span><span class="mobile-button-label" aria-hidden="true">← Back</span></button></header>
       <p id="storeMessagesStatus" class="account-status" role="status"></p>
       <div class="store-messages-layout">
         <aside class="glass-card jobs-section"><h2>Conversations</h2><div id="storeConversations" class="jobs-list"></div></aside>
@@ -1147,7 +1147,7 @@
     </main>
     <main id="tasksPage" class="notifications-page hidden" aria-hidden="true">
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1>Tasks</h1></div><button type="button" id="tasksNotificationsButton" class="secondary-btn">Notifications</button><button type="button" id="closeTasks" class="secondary-btn">Back to Coriva</button></header>
+      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1>Tasks</h1></div><button type="button" id="tasksNotificationsButton" class="secondary-btn">Notifications</button><button type="button" id="closeTasks" class="secondary-btn" aria-label="Back to Coriva"><span class="desktop-button-label">Back to Coriva</span><span class="mobile-button-label" aria-hidden="true">← Back</span></button></header>
       <section class="glass-card jobs-section"><h2>Your projects</h2><p class="helper-text">Track projects awarded to your store.</p><p id="tasksStatus" class="account-status" role="status"></p><div id="tasksList" class="request-grid"></div></section>
     </main>
     <div id="buyerRequestModal" class="modal-overlay hidden" aria-hidden="true"><section class="invoice-modal glass-card" role="dialog" aria-modal="true" aria-labelledby="buyerRequestTitle"><button type="button" id="closeBuyerRequest" class="modal-close" aria-label="Close">×</button><h2 id="buyerRequestTitle">Post a buyer request</h2>
@@ -1158,7 +1158,7 @@
 
     <main id="notificationsPage" class="notifications-page hidden" aria-hidden="true">
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1>Notifications &amp; jobs</h1></div><button type="button" class="secondary-btn hidden" id="notificationTasksButton">Tasks</button><button type="button" class="secondary-btn" id="closeNotifications">Back to Coriva</button></header>
+      <header class="topbar branded-subpage-topbar"><div class="subpage-title-group"><h1>Notifications &amp; jobs</h1></div><button type="button" class="secondary-btn hidden" id="notificationTasksButton">Tasks</button><button type="button" class="secondary-btn" id="closeNotifications" aria-label="Back to Coriva"><span class="desktop-button-label">Back to Coriva</span><span class="mobile-button-label" aria-hidden="true">← Back</span></button></header>
       <p id="jobsStatus" class="account-status" aria-live="polite"></p>
       <div class="jobs-layout">
         <section class="glass-card jobs-section"><h2>Notifications</h2><p class="helper-text">Your latest 100 updates</p><div id="notificationList" class="jobs-list"></div></section>
@@ -1192,13 +1192,13 @@
 
     <main id="publicProfilePage" class="public-profile-page hidden" aria-hidden="true" aria-labelledby="publicProfileName">
       <div class="brand-mark coriva-brand subpage-brand"><span class="coriva-logo" role="img" aria-label="Coriva"></span></div>
-      <nav class="public-profile-nav branded-subpage-nav"><button id="publicProfileBack" type="button" class="ghost-btn">← Back to Coriva</button></nav>
+      <nav class="public-profile-nav branded-subpage-nav"><button id="publicProfileBack" type="button" class="ghost-btn" aria-label="← Back to Coriva"><span class="desktop-button-label">← Back to Coriva</span><span class="mobile-button-label" aria-hidden="true">← Back</span></button></nav>
       <section class="glass-card public-profile-hero">
         <div class="public-profile-cover"><img id="publicProfileBanner" class="hidden" alt="Profile banner" /><div class="public-profile-shade"></div>
           <div class="public-profile-identity"><div id="publicProfileAvatar" class="avatar public-profile-avatar"></div><div><h1 id="publicProfileName" tabindex="-1"></h1><p id="publicProfileHandle" class="helper-text"></p><div id="publicProfileSocials" class="social-links" aria-label="Social links"></div></div></div>
         </div>
         <div class="public-profile-details">
-          <div class="public-profile-actions"><button type="button" id="publicProfileEdit" class="ghost-btn hidden">Customize profile</button><button type="button" id="publicProfileShare" class="primary-btn">Share profile</button></div>
+          <div class="public-profile-actions"><button type="button" id="publicProfileEdit" class="ghost-btn hidden" aria-label="Customize profile"><span class="desktop-button-label">Customize profile</span><span class="mobile-button-label" aria-hidden="true">Customize</span></button><button type="button" id="publicProfileShare" class="primary-btn" aria-label="Share profile"><span class="desktop-button-label">Share profile</span><span class="mobile-button-label" aria-hidden="true">Share</span></button></div>
           <p id="publicProfileSpecialty" class="helper-text"></p><p id="publicProfileAbout" class="public-profile-bio"></p>
           <p id="publicProfileStatus" role="status" aria-live="polite"></p><button type="button" id="publicProfileRetry" class="secondary-btn hidden">Retry loading profile</button>
           <form id="publicProfileEditor" class="store-form public-profile-editor hidden">

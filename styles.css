@@ -3230,3 +3230,37 @@ button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b
 .profile-directory-grid .empty-state{grid-column:1/-1}.room-profile-link{font-weight:700;cursor:pointer;text-decoration:none}.room-profile-link:hover{text-decoration:underline;color:var(--blue)}
 .profile-directory-card:focus-visible,.room-profile-link:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
 @media(max-width:700px){.profile-directory-grid{grid-template-columns:1fr}}
+
+/* Compact mobile header controls; desktop labels and form layouts stay intact. */
+.mobile-button-label{display:none}
+@media(max-width:700px){
+ .desktop-button-label{display:none}.mobile-button-label{display:inline}
+ .page-shell>.topbar{gap:.7rem;padding:.75rem}
+ .top-actions{display:flex;width:100%;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:.3rem}
+ .top-actions button{width:auto;min-width:0;flex:0 1 auto;min-height:36px;padding:.5rem .6rem;font-size:.75rem;line-height:1.2;white-space:nowrap}
+ .branded-subpage-nav{gap:.35rem;align-items:center;flex-wrap:nowrap}
+ .branded-subpage-nav button,.branded-subpage-topbar>button{width:auto;flex:0 1 auto;min-width:0;min-height:36px;padding:.5rem .6rem;font-size:.75rem;line-height:1.2;white-space:nowrap}
+ .storefront-nav-actions{display:flex;align-items:center;flex-wrap:nowrap!important;gap:.3rem;min-width:0}
+ .branded-subpage-topbar{gap:.4rem;align-items:center}
+ .branded-subpage-topbar>.subpage-title-group{margin-bottom:.3rem}
+ .public-profile-details>.public-profile-actions,.public-profile-share .public-profile-actions{display:flex;flex-wrap:nowrap;gap:.5rem;align-items:center}
+ .public-profile-details>.public-profile-actions>button,.public-profile-share .public-profile-actions>button,.public-profile-share .public-profile-actions>a{width:auto;flex:0 1 auto;min-width:0;min-height:36px;padding:.5rem .7rem;font-size:.75rem;line-height:1.2;white-space:nowrap}
+ #manageStorefrontButton,#manageRoomButton{font-size:0}
+ #manageStorefrontButton::after,#manageRoomButton::after{content:'Manage';font-size:.75rem;line-height:1.2}
+ #manageStorefrontButton[aria-expanded=true]::after,#manageRoomButton[aria-expanded=true]::after{content:'Done'}
+}
+@media(max-width:360px){
+ .top-actions{gap:.2rem}.top-actions button{padding:.5rem .45rem;font-size:.7rem}
+ .branded-subpage-nav button,.branded-subpage-topbar>button{padding:.5rem .45rem;font-size:.7rem}
+ .storefront-nav-actions{gap:.2rem}
+ #manageStorefrontButton::after,#manageRoomButton::after{font-size:.7rem}
+}
+@media(max-width:700px){
+ .top-actions button.primary-btn,.top-actions button.secondary-btn,.top-actions button.ghost-btn{width:auto;flex:0 0 auto}
+}
+@media(max-width:700px){
+ .top-actions button.primary-btn,.top-actions button.secondary-btn,.top-actions button.ghost-btn{font-size:.75rem;padding-inline:.55rem;min-height:36px;line-height:1.2}
+}
+@media(max-width:360px){
+ .top-actions button.primary-btn,.top-actions button.secondary-btn,.top-actions button.ghost-btn{font-size:.7rem;padding-inline:.35rem}
+}
