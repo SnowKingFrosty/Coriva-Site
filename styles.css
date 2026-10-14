@@ -3217,3 +3217,5 @@ button.storefront-post-card:focus-visible { outline: 2px solid var(--accent, #8b
 @media(max-width:600px){.subpage-brand.brand-mark.coriva-brand{top:12px;left:12px;width:48px;height:48px}.branded-subpage-nav,.branded-subpage-topbar{padding-left:64px;min-height:68px}.subpage-title-group{flex:1 1 100%;gap:.75rem}.subpage-title-group h1{font-size:1.3rem}.branded-subpage-nav .storefront-nav-actions{flex-wrap:wrap;gap:.5rem}.public-profile-nav.branded-subpage-nav>button{width:auto;max-width:100%}}
 .public-profile-avatar{border:0}
 #publicProfileName,#publicProfileHandle{border:0;outline:none;box-shadow:none}
+
+#feedFullscreenButton{margin-left:auto}
